@@ -793,19 +793,22 @@
   function syncDueViewport(){
     var m = $("dueModal");
     if (!m) return;
-    if (!dueInputFocused) {
+    var vv = window.visualViewport;
+    var vvShrunk = !!(vv && vv.height > 0 && (window.innerHeight - vv.height) > 80);
+    var nativeActive = !!(nativeVisibleHeight > 100 && m.classList.contains("show"));
+    // 有的机型 focusin 不触发；只要原生报上来了键盘高度，弹层在显示就直接用。
+    if (!dueInputFocused && !vvShrunk && !nativeActive) {
       m.style.height = "";
       m.style.top = "";
       m.style.bottom = "";
       return;
     }
-    var vv = window.visualViewport;
     var h = 0;
-    if (vv && vv.height > 0 && (window.innerHeight - vv.height) > 80) {
+    if (vvShrunk) {
       h = vv.height;
     } else if (nativeVisibleHeight > 100) {
       // Android 16 / iQOO：WebView 的 visualViewport 不一定随键盘收缩，
-      // 用原生 OnApplyWindowInsets 算出的可见高度兜底。
+      // 用原生 IME inset / 可见显示区域算出的高度兜底。
       h = nativeVisibleHeight;
     }
     if (h > 0) {

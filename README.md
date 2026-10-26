@@ -1,4 +1,4 @@
-# ADHD-lite（v0.11.6 · 手机端）
+# ADHD-lite（v0.11.7 · 手机端）
 
 > 接手/继续开发请先看 [docs/新会话交接摘要.md](docs/新会话交接摘要.md)；逐轮变更记录在 [docs/现状与剩余任务.md](docs/现状与剩余任务.md)。
 
@@ -14,6 +14,7 @@
 > v0.11.4 重做手机截止选择：主界面只留一个「今天 23:59 ▾」，点开是「快速 / 延时 / 指定」三页；延时改成步进器 + 常用值，指定改成日期/时间快选，不再一上来就摆两个原生输入框。
 > v0.11.5 修键盘遮挡：输入延时数字/日期/时间时，底部弹层会随 `visualViewport` 浮到键盘上方，实时预览也上移了。
 > v0.11.6 针对 iQOO / Android 16：`visualViewport` 不收缩时，改用原生 `WindowInsets.Type.ime()` + `getWindowVisibleDisplayFrame()` 算可见高度，弹层照样浮到键盘上方。
+> v0.11.7 再兜底：即使页面没收到 focusin，只要原生上报了键盘可见高度，截止弹层也会直接上浮。
 > 不截屏、不读别的窗口；桌面 exe 331.5 KB（v0.11.0，本轮未改）+ Android APK 44.6 KB；AI 只在你主动点按钮 / 排提醒时联网。
 
 ![清单：现在做哪件](docs/清单-现在做哪件.png)
@@ -104,9 +105,9 @@
 要重新打包：双击 `pack.cmd`（会先编译，再生成 zip），或先 `build.cmd` 后运行
 `powershell -NoProfile -ExecutionPolicy Bypass -File tools\pack.ps1`。`dist\` 不进 git。
 
-### Android 手机端（v0.11.6）
+### Android 手机端（v0.11.7）
 
-1. 手机安装 `android\dist\ADHD-lite-android-v0.11.6.apk`（允许未知来源；同 debug 签名可覆盖旧版）。
+1. 手机安装 `android\dist\ADHD-lite-android-v0.11.7.apk`（允许未知来源；同 debug 签名可覆盖旧版）。
 2. 首次打开允许通知；Android 12+ 再点「允许精确闹钟」，并把电池优化设为「不受限制」。
 3. 电脑和手机都登录 **Tailscale**（推荐），或在同一 Wi-Fi。
 4. 电脑：设置拉到最底部 →「手机 / 同步」→ 点亮开关，点「连接手机」展开地址和令牌，再填进手机 App。
@@ -543,6 +544,7 @@ _electron_fallback\  跑不起来的 Electron 版（可删，省 369 MB）
 | **v0.11.4** | **手机截止重做：快速 / 延时步进器 / 指定快选；主界面一个按钮** | ✅ 已完成（APK 44.6 KB / versionCode 16） |
 | **v0.11.5** | **键盘不再挡截止弹层：visualViewport 让弹层浮到键盘上方** | ✅ 已完成（APK 44.6 KB / versionCode 17） |
 | **v0.11.6** | **iQOO / Android 16 键盘避让兜底：原生 IME inset + 可见显示区域** | ✅ 已完成（APK 44.6 KB / versionCode 18） |
+| **v0.11.7** | **不依赖 focusin：原生上报键盘高度就直接抬起截止弹层** | ✅ 已完成（APK 44.6 KB / versionCode 19） |
 | v0.12 | markdown 原生存储 / 手机离线冲突合并 / 手机通知「完成」动作 | 待做 |
 
 ### 清单页怎么打开
