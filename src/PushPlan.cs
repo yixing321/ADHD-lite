@@ -309,6 +309,13 @@ namespace AdhdLite
                   .Append(" | ").Append(t.snoozeCount + t.postponeCount).Append(" 次")
                   .Append(" | ").Append(Trim(t.title, 40)).Append("\n");
             }
+            if (!string.IsNullOrEmpty(settings.pinTaskId))
+            {
+                var pin = tasks.Find(delegate(TaskItem x) { return x.id == settings.pinTaskId && !x.done; });
+                if (pin != null)
+                    sb.Append("\n用户指定优先任务：").Append(Trim(pin.title, 40))
+                      .Append("。请至少为它安排一次提醒，并在 summary 里优先提它。\n");
+            }
             sb.Append("\n决定接下来 12 小时内的提醒时间点。只输出 JSON，不要解释。");
             return sb.ToString();
         }

@@ -605,6 +605,19 @@ namespace AdhdLite
                 long db = b.task.due.HasValue ? b.task.due.Value : long.MaxValue;
                 return da.CompareTo(db);
             });
+
+            // v0.11：设置里指定的「优先任务」永远排第一，AI 排提醒 / 现在做哪件都先看它。
+            if (!string.IsNullOrEmpty(settings.pinTaskId))
+            {
+                int idx = list.FindIndex(delegate(TaskPick p) { return p.task.id == settings.pinTaskId; });
+                if (idx > 0)
+                {
+                    var pin = list[idx];
+                    list.RemoveAt(idx);
+                    pin.reason = string.IsNullOrEmpty(pin.reason) ? "你设为优先" : ("你设为优先 · " + pin.reason);
+                    list.Insert(0, pin);
+                }
+            }
             return list;
         }
 

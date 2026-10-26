@@ -4,7 +4,7 @@
 
 ## 安装
 
-1. 把 `dist\ADHD-lite-android-v0.11.9.apk` 发到手机（微信/QQ/数据线都可）。
+1. 把 `dist\ADHD-lite-android-v0.11.10.apk` 发到手机（微信/QQ/数据线都可）。
 2. 在手机上允许「安装未知来源应用」，安装 APK。
 3. 首次打开会请求通知权限；Android 12+ 再点一次「允许精确闹钟」，并在设置里把电池优化设为「不受限制」，否则提醒可能不准点。
 4. 在电脑端：`ADHD-lite.exe` → 设置 → 手机 / 同步 → 点亮「手机同步」。
@@ -12,6 +12,12 @@
    - 都登录 Tailscale 时用 `http://100.x.x.x:17890`（推荐）；
    - 同一 Wi-Fi 用 `http://192.168.x.x:17890`。
 6. 点「保存并连接」。电脑开着时手机即可增删改、开始/暂停、计时、AI 拆解/取舍。
+
+## v0.11.10 新增
+
+- **提前提醒**：设置 → 同步与通知 → 提前提醒（5/10/15/30/60 分钟或不提前）。每个任务在截止前 `preMin` 分钟再排一个本地闹钟，通知标题「快到时间了：任务名」，正文「还有 X 分钟到截止」。
+- **修延时弹层自动关**：点延时数字框后不再立即把弹层移到上半屏，改为延迟 180ms；并给遮罩点击加 500–600ms 保护，避免 click 落到遮罩上关闭弹层。
+- 点「快到时间了」通知打开任务时，弹窗标题也是「快到时间了」，不是「到点了」。
 
 ## v0.11.9 新增
 
@@ -108,7 +114,7 @@ cd D:\ADHD清单
 powershell -NoProfile -ExecutionPolicy Bypass -File android\build-apk.ps1
 ```
 
-产物：`android\dist\ADHD-lite-android-v0.11.9.apk`（versionCode 21，debug 签名）。
+产物：`android\dist\ADHD-lite-android-v0.11.10.apk`（versionCode 22，debug 签名）。
 
 说明：`aapt2` 在中文路径下会报 `failed to open directory`，脚本会先把 `app/` 复制到 ASCII 临时目录编译。脚本必须保存为 **UTF-8 with BOM**（Windows PowerShell 5.1 否则会把中文注释按 ANSI 解析，变量会变空）。
 
@@ -126,5 +132,5 @@ app/java/com/adhd/lite/
   ApkProvider.java              v0.11 给系统安装器读 update.apk 的最小 ContentProvider
 build-apk.ps1                   aapt2 + javac + d8 + zipalign + apksigner
 debug.keystore                  调试签名（升级 APK 必须用同一个）
-dist/                           生成的 APK（v0.11.9 已提交，便于直接安装）
+dist/                           生成的 APK（v0.11.10 已提交，便于直接安装）
 ```

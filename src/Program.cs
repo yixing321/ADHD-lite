@@ -125,6 +125,7 @@ namespace AdhdLite
         public int mobileOn { get; set; }      // v0.10：手机同步 API
         public int mobilePort { get; set; }
         public string mobileToken { get; set; }
+        public string pinTaskId { get; set; }  // v0.11：AI 排提醒优先任务
 
         public Settings()
         {
@@ -150,6 +151,7 @@ namespace AdhdLite
             mobileOn = 0;
             mobilePort = 17890;
             mobileToken = "";
+            pinTaskId = "";
         }
     }
 

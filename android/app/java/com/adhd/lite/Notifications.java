@@ -49,12 +49,13 @@ public final class Notifications {
         try { nm.deleteNotificationChannel(LEGACY_CHANNEL); } catch (Exception ignored) { }
     }
 
-    public static void showTask(Context ctx, String id, String title, String priority, long due, boolean plan) {
+    public static void showTask(Context ctx, String id, String title, String priority, long due, boolean plan, int preMin) {
         ensureChannel(ctx);
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
         Intent open = new Intent(ctx, MainActivity.class);
         open.putExtra("taskId", id);
+        open.putExtra("preMin", preMin);
         open.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pi = PendingIntent.getActivity(ctx, requestCode(id), open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
@@ -70,10 +71,14 @@ public final class Notifications {
             when = f.format(new java.util.Date(due));
         } catch (Exception ignored) { }
 
-        String text = plan ? "AI 提醒 · 点开处理"
-             : (when.length() > 0 ? ("截止 " + when + " · 点开处理") : "点开处理");
+        String text = preMin > 0 ? ("还有 " + preMin + " 分钟到截止 · 点开处理")
+             : (plan ? "AI 提醒 · 点开处理"
+             : (when.length() > 0 ? ("截止 " + when + " · 点开处理") : "点开处理"));
+        String shownTitle = preMin > 0
+             ? ("快到时间了：" + (title == null ? "该做这件事了" : title))
+             : (title == null ? "该做这件事了" : title);
         b.setSmallIcon(icon)
-         .setContentTitle(title == null ? "该做这件事了" : title)
+         .setContentTitle(shownTitle)
          .setContentText(text)
          .setStyle(new Notification.BigTextStyle().bigText(text))
          .setContentIntent(pi)

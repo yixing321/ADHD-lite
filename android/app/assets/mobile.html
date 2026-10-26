@@ -246,6 +246,15 @@
     <div class="settingsSec">
       <h3>同步与通知</h3>
       <div class="hint" id="nativeStatus" style="margin-top:2px">通知状态读取中…</div>
+      <div class="chips" id="preMinChips">
+        <span class="label">提前提醒</span>
+        <button class="chip" data-m="0">不提前</button>
+        <button class="chip" data-m="5">5 分</button>
+        <button class="chip" data-m="10">10 分</button>
+        <button class="chip" data-m="15">15 分</button>
+        <button class="chip on" data-m="30">30 分</button>
+        <button class="chip" data-m="60">60 分</button>
+      </div>
       <div class="row" style="margin-top:8px;flex-wrap:wrap">
         <button class="btn ghost" id="noticeBtn">允许通知</button>
         <button class="btn ghost" id="channelBtn">通知通道设置</button>
@@ -255,7 +264,7 @@
         <button class="btn ghost" id="testNotify">测试通知（5 秒）</button>
         <button class="btn ghost" id="bgTestBtn">后台自检（30 秒）</button>
       </div>
-      <div class="hint">通知不弹/不响时依次检查：通知权限 → 通知通道（横幅/声音/震动）→ 精确闹钟 → 电池优化。测试通知走「响铃」通道，只验证手机本地，不需要电脑开着。</div>
+      <div class="hint">「提前提醒」会在截止前再响一次「快到时间了」；到点仍会响。通知不弹/不响时依次检查：通知权限 → 通知通道（横幅/声音/震动）→ 精确闹钟 → 电池优化。</div>
     </div>
 
     <div class="settingsSec">
@@ -458,6 +467,8 @@
   } catch(e) {}
   var priority = localStorage.getItem(LS_PRI) || "mid";
   var duePick = { due: todayEndMs(), label: "今天 23:59" };
+  var preMin = parseInt(localStorage.getItem("adhd_pre_min") || "30", 10);
+  if ([0,5,10,15,30,60].indexOf(preMin) < 0) preMin = 30;
   var dueTab = "quick";
   var delayUnit = "min";
   var dateBase = 0;
@@ -468,6 +479,10 @@
   var timePick = "";
   var dueInputFocused = false;
   var nativeVisibleHeight = 0;
+  var dueKbdTimer = null;
+  var dueKbdReady = false;
+  var dueShieldUntil = 0;
+  var pendingFocusPre = 0;
   var busy = false;
   var pollTimer = null;
   var splitSteps = [];
@@ -813,6 +828,8 @@
   }
   function closeDueSheet(){
     dueInputFocused = false;
+    dueKbdReady = false;
+    if (dueKbdTimer) { clearTimeout(dueKbdTimer); dueKbdTimer = null; }
     var m = $("dueModal");
     if (m) {
       m.classList.remove("show");
@@ -822,9 +839,24 @@
       m.style.bottom = "";
     }
   }
+  function armDueKeyboardMode(){
+    if (dueKbdTimer) clearTimeout(dueKbdTimer);
+    dueKbdReady = false;
+    // 延迟再抬弹层：让本次点击先完整落在原来的输入框/按钮上，
+    // 避免弹层瞬间移走后 click 落到遮罩上把界面关掉。
+    dueKbdTimer = setTimeout(function(){
+      dueKbdTimer = null;
+      dueKbdReady = true;
+      setDueKeyboardMode(true);
+      dueShieldUntil = Date.now() + 600;
+      syncDueViewport();
+    }, 180);
+  }
   function syncDueViewport(){
     var m = $("dueModal");
     if (!m) return;
+    // 点击后的 180ms 内先不动，等 click 完整落到输入框上。
+    if (dueInputFocused && !dueKbdReady) return;
     var vv = window.visualViewport;
     var vvShrunk = !!(vv && vv.height > 0 && (window.innerHeight - vv.height) > 80);
     var nativeActive = !!(nativeVisibleHeight > 100 && m.classList.contains("show"));
@@ -847,6 +879,7 @@
       m.style.height = h + "px";
       m.style.top = "0px";
       m.style.bottom = "auto";
+      dueShieldUntil = Date.now() + 500;
     } else {
       m.style.height = "";
       m.style.top = "";
@@ -998,12 +1031,20 @@
     sig += "||" + plans.map(function(p){
       return [p.at || 0, p.message || "", p.level || 0].join("~");
     }).join("|");
+    sig += "||pre=" + preMin;
     if (sig === lastNativeSig) return;
     lastNativeSig = sig;
     try {
-      window.AndroidHost.scheduleNotifications(JSON.stringify({ tasks: state.tasks, plan: plans }));
+      window.AndroidHost.scheduleNotifications(JSON.stringify({ tasks: state.tasks, plan: plans, preMin: preMin }));
       refreshNativeStatus();
     } catch(e) {}
+  }
+
+  function paintPreMin(){
+    var chips = $("preMinChips");
+    if (!chips) return;
+    var all = chips.querySelectorAll("button[data-m]");
+    for (var i=0;i<all.length;i++) all[i].classList.toggle("on", parseInt(all[i].getAttribute("data-m"), 10) === preMin);
   }
 
   var lastNativeStatus = null;
@@ -1098,11 +1139,13 @@
   function openTask(id){ for (var i=0;i<state.tasks.length;i++) if (state.tasks[i].id===id) return state.tasks[i]; return null; }
 
   // 从通知/全屏提醒点进来：直接弹「到点了」，可以完成或稍后 15 分。
-  function focusTask(id){
-    if (!state || !state.tasks) { pendingFocusId = id; return; }
+  function focusTask(id, preMin){
+    if (!state || !state.tasks) { pendingFocusId = id; pendingFocusPre = preMin || 0; return; }
     var t = openTask(id);
     if (!t) { showToast("找不到这条任务"); return; }
-    showModal("到点了", t.title + "\n" + fmtDue(t.due) + " · " + priName(t.priority), [], false);
+    var title = preMin > 0 ? "快到时间了" : "到点了";
+    var detail = preMin > 0 ? ("还有 " + preMin + " 分钟到截止") : fmtDue(t.due);
+    showModal(title, t.title + "\n" + detail + " · " + priName(t.priority), [], false);
     var ok = $("modalOk");
     ok.classList.remove("hidden");
     ok.textContent = "完成";
@@ -1355,8 +1398,10 @@
     if (overload) $("overloadText").textContent = "今天有 " + open + " 件待办，先挑一件？";
     if (pendingFocusId) {
       var fid = pendingFocusId;
+      var fpre = pendingFocusPre;
       pendingFocusId = "";
-      setTimeout(function(){ focusTask(fid); }, 0);
+      pendingFocusPre = 0;
+      setTimeout(function(){ focusTask(fid, fpre); }, 0);
     }
     refreshUpdateHint();
     tick();
@@ -1382,6 +1427,14 @@
     if (st && st.notifications === false && AndroidHost.openNotificationSettings) AndroidHost.openNotificationSettings();
     else if (AndroidHost.requestNotificationPermission) AndroidHost.requestNotificationPermission();
   };
+  $("preMinChips").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-m]"); if (!b) return;
+    preMin = parseInt(b.getAttribute("data-m"), 10) || 0;
+    localStorage.setItem("adhd_pre_min", String(preMin));
+    paintPreMin();
+    syncNative();
+    showToast(preMin > 0 ? ("已设提前 " + preMin + " 分钟提醒") : "已设为只在截止时提醒");
+  });
   $("testNotify").onclick = function(){
     if (window.AndroidHost && AndroidHost.testNotification) { AndroidHost.testNotification(); showToast("5 秒后应响铃并弹出横幅"); }
     else showToast("浏览器里不需要；装 APK 后可用");
@@ -1427,7 +1480,9 @@
   $("dueBtn").onclick = function(){ openDueSheet("quick"); };
   $("dueClose").onclick = closeDueSheet;
   $("dueCancel").onclick = closeDueSheet;
-  $("dueModal").addEventListener("click", function(e){ if (e.target === $("dueModal")) closeDueSheet(); });
+  $("dueModal").addEventListener("click", function(e){
+    if (e.target === $("dueModal") && Date.now() > dueShieldUntil) closeDueSheet();
+  });
   $("dueTabs").addEventListener("click", function(e){
     var b = e.target.closest("button[data-tab]"); if (!b) return;
     dueTab = b.getAttribute("data-tab"); paintDueSheet();
@@ -1508,23 +1563,27 @@
   };
   $("dueModal").addEventListener("pointerdown", function(e){
     if (e.target && e.target.tagName === "INPUT") {
-      setDueKeyboardMode(true);
       dueInputFocused = true;
-      setTimeout(syncDueViewport, 60);
-      setTimeout(syncDueViewport, 320);
+      dueKbdReady = false;
+      dueShieldUntil = Date.now() + 900;
+      armDueKeyboardMode();
+      setTimeout(syncDueViewport, 420);
     }
   }, true);
   $("dueModal").addEventListener("focusin", function(e){
     if (!e.target || e.target.tagName !== "INPUT") return;
     dueInputFocused = true;
-    setDueKeyboardMode(true);
-    setTimeout(syncDueViewport, 60);
-    setTimeout(syncDueViewport, 320);
+    dueKbdReady = false;
+    dueShieldUntil = Date.now() + 900;
+    armDueKeyboardMode();
+    setTimeout(syncDueViewport, 420);
   });
   $("dueModal").addEventListener("focusout", function(){
     setTimeout(function(){
       if (!$("dueModal").contains(document.activeElement)) {
         dueInputFocused = false;
+        dueKbdReady = false;
+        if (dueKbdTimer) { clearTimeout(dueKbdTimer); dueKbdTimer = null; }
         setDueKeyboardMode(false);
         syncDueViewport();
       }
@@ -1606,6 +1665,7 @@
   if ($("dueDate")) $("dueDate").value = localDateValue(new Date());
   setDuePick(duePick.due, "今天 23:59");
   paintChips();
+  paintPreMin();
   applyTheme();
 
   // init

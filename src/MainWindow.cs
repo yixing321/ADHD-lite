@@ -1992,6 +1992,54 @@ namespace AdhdLite
             planHint.Margin = new Thickness(2, 3, 0, 0);
             mainContent.Children.Add(planHint);
 
+            var pinTitle = new TextBlock();
+            pinTitle.Text = "AI 排提醒优先任务";
+            pinTitle.FontSize = 11.5;
+            pinTitle.Foreground = B(TextSub);
+            pinTitle.Margin = new Thickness(2, 8, 0, 2);
+            mainContent.Children.Add(pinTitle);
+
+            var pinBox = new ComboBox();
+            pinBox.Width = 320;
+            pinBox.HorizontalAlignment = HorizontalAlignment.Left;
+            pinBox.FontSize = 11.5;
+            pinBox.Margin = new Thickness(2, 0, 0, 1);
+            pinBox.Background = B(CardBg);
+            pinBox.Foreground = B(TextMain);
+            pinBox.BorderBrush = B(LineCol);
+            var pinNone = new ComboBoxItem();
+            pinNone.Content = "不指定（按 AI / 惯例）";
+            pinNone.Tag = "";
+            pinBox.Items.Add(pinNone);
+            int pinSel = 0;
+            foreach (var t in tasks)
+            {
+                if (t == null || t.done) continue;
+                var it = new ComboBoxItem();
+                it.Content = t.title;
+                it.Tag = t.id;
+                pinBox.Items.Add(it);
+                if (t.id == settings.pinTaskId) pinSel = pinBox.Items.Count - 1;
+            }
+            pinBox.SelectedIndex = pinSel;
+            pinBox.SelectionChanged += delegate
+            {
+                var it = pinBox.SelectedItem as ComboBoxItem;
+                settings.pinTaskId = (it == null || it.Tag == null) ? "" : it.Tag.ToString();
+                SaveSettings();
+                EnsurePlanFresh(true);
+                RefreshMain();
+            };
+            mainContent.Children.Add(pinBox);
+
+            var pinHint = new TextBlock();
+            pinHint.Text = "只影响 AI 排提醒和「现在做哪件」的先后，不改变任务重要度；这条任务完成后自动跳过。";
+            pinHint.FontSize = 10.5;
+            pinHint.Foreground = B(TextMuted);
+            pinHint.TextWrapping = TextWrapping.Wrap;
+            pinHint.Margin = new Thickness(2, 3, 0, 0);
+            mainContent.Children.Add(pinHint);
+
             mainContent.Children.Add(SectionTitle("数据"));
 
             var dir = new TextBlock();

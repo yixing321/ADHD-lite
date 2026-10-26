@@ -34,6 +34,9 @@ public final class AlarmScheduler {
             JSONObject root = new JSONObject(json);
             JSONArray arr = root.optJSONArray("tasks");
             if (arr == null) arr = new JSONArray(json);
+            int preMin = root.optInt("preMin", 30);
+            if (preMin < 0) preMin = 0;
+            if (preMin > 240) preMin = 240;
             long now = System.currentTimeMillis();
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject t = arr.optJSONObject(i);
@@ -42,8 +45,18 @@ public final class AlarmScheduler {
                 if (due <= now + 750) continue;
                 String id = t.optString("id", "");
                 if (id.length() == 0) continue;
-                schedule(ctx, id, t.optString("title", "任务"), t.optString("priority", "mid"), due, false);
+                String title = t.optString("title", "任务");
+                String priority = t.optString("priority", "mid");
+                schedule(ctx, id, title, priority, due, false, 0);
                 ids.add(id);
+                if (preMin > 0) {
+                    long preAt = due - preMin * 60000L;
+                    if (preAt > now + 750) {
+                        String pid = "pre-" + id;
+                        schedule(ctx, pid, title, priority, preAt, false, preMin);
+                        ids.add(pid);
+                    }
+                }
             }
 
             JSONArray plans = root.optJSONArray("plan");
@@ -55,7 +68,7 @@ public final class AlarmScheduler {
                     if (at <= now + 750) continue;
                     String msg = p.optString("message", "该看看清单了");
                     String pid = "plan-" + at + "-" + i;
-                    schedule(ctx, pid, msg, p.optInt("level", 1) == 0 ? "high" : "mid", at, true);
+                    schedule(ctx, pid, msg, p.optInt("level", 1) == 0 ? "high" : "mid", at, true, 0);
                     ids.add(pid);
                 }
             }
@@ -76,7 +89,7 @@ public final class AlarmScheduler {
         new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
             public void run() {
                 Notifications.showTask(app, "test-" + System.currentTimeMillis(),
-                        "测试提醒：手机本地通知正常", "high", System.currentTimeMillis(), false);
+                        "测试提醒：手机本地通知正常", "high", System.currentTimeMillis(), false, 0);
             }
         }, 5000);
     }
@@ -90,10 +103,10 @@ public final class AlarmScheduler {
     // 退后台自检：走真正的 AlarmManager，30 秒后响；用来验证“划掉 App 后还响不响”。
     public static void testBackground(Context ctx) {
         long at = System.currentTimeMillis() + 30000;
-        schedule(ctx, "bgtest-" + at, "后台自检：30 秒后应弹通知（响铃+横幅）", "high", at, false);
+        schedule(ctx, "bgtest-" + at, "后台自检：30 秒后应弹通知（响铃+横幅）", "high", at, false, 0);
     }
 
-    private static void schedule(Context ctx, String id, String title, String priority, long due, boolean plan) {
+    private static void schedule(Context ctx, String id, String title, String priority, long due, boolean plan, int preMin) {
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
         Intent i = new Intent(ctx, ReminderReceiver.class);
@@ -103,6 +116,7 @@ public final class AlarmScheduler {
         i.putExtra("priority", priority);
         i.putExtra("due", due);
         i.putExtra("plan", plan);
+        i.putExtra("preMin", preMin);
         PendingIntent pi = PendingIntent.getBroadcast(ctx, Notifications.requestCode(id), i,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         boolean exact = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms();
@@ -112,6 +126,7 @@ public final class AlarmScheduler {
                 Intent show = new Intent(ctx, MainActivity.class);
                 show.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                 show.putExtra("taskId", id);
+                show.putExtra("preMin", preMin);
                 PendingIntent showPi = PendingIntent.getActivity(ctx,
                         Notifications.requestCode(id) + 1000, show,
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);

@@ -13,6 +13,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         String priority = intent.getStringExtra("priority");
         long due = intent.getLongExtra("due", System.currentTimeMillis());
         boolean plan = intent.getBooleanExtra("plan", false);
-        Notifications.showTask(context, id, title, priority, due, plan);
+        int preMin = intent.getIntExtra("preMin", 0);
+        Notifications.showTask(context, id, title, priority, due, plan, preMin);
     }
 }

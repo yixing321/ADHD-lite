@@ -33,6 +33,7 @@ import java.net.URL;
 public class MainActivity extends Activity {
     private WebView web;
     private String pendingTaskId = "";
+    private int pendingPreMin = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -147,6 +148,7 @@ public class MainActivity extends Activity {
         String id = intent.getStringExtra("taskId");
         if (id != null && id.length() > 0) {
             pendingTaskId = id;
+            pendingPreMin = intent.getIntExtra("preMin", 0);
             focusPendingTask();
         }
     }
@@ -154,10 +156,12 @@ public class MainActivity extends Activity {
     private void focusPendingTask() {
         if (web == null || pendingTaskId == null || pendingTaskId.length() == 0) return;
         String id = pendingTaskId;
+        int pre = pendingPreMin;
         pendingTaskId = "";
+        pendingPreMin = 0;
         try {
             web.evaluateJavascript("window.adhdFocusTask && window.adhdFocusTask("
-                    + JSONObject.quote(id) + ")", null);
+                    + JSONObject.quote(id) + "," + pre + ")", null);
         } catch (Exception ignored) { }
     }
 
