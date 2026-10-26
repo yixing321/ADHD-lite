@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#0f1419">
 <title>ADHD-lite</title>
 <style>
@@ -109,6 +109,7 @@
   .overload .btn { margin-left:auto; }
   .modal { position:fixed; inset:0; background:rgba(0,0,0,.62); display:none; z-index:50; padding:18px; }
   .modal.show { display:flex; align-items:flex-end; }
+  .modal .sheet { max-height:calc(100% - 36px); }
   .sheet { width:100%; max-width:720px; margin:0 auto; background:var(--card); border:1px solid var(--line);
     border-radius:16px; padding:14px; max-height:82vh; overflow:auto; }
   .sheet h3 { margin:0 0 8px; font-size:15px; }
@@ -348,6 +349,7 @@
         <input id="delayNum" type="number" min="1" value="30" inputmode="numeric" aria-label="延时数字">
         <button class="stepbtn" id="delayPlus" aria-label="增加">＋</button>
       </div>
+      <div class="hint" id="delayPreview"></div>
       <div class="chips" id="delayUnits">
         <span class="label">单位</span>
         <button class="chip on" data-u="min">分钟</button>
@@ -363,7 +365,6 @@
         <button class="chip" data-n="60">60</button>
         <button class="chip" data-n="120">120</button>
       </div>
-      <div class="hint" id="delayPreview"></div>
     </div>
 
     <div id="dueDatePane" class="duepane hidden">
@@ -440,6 +441,7 @@
   var dateTime = "21:00";
   var dateSynced = false;
   var timePick = "";
+  var dueInputFocused = false;
   var busy = false;
   var pollTimer = null;
   var splitSteps = [];
@@ -753,6 +755,7 @@
     $("dueModal").classList.add("show");
     if (dueTab === "date" && !dateSynced) syncDateFromDue();
     paintDueSheet();
+    setTimeout(syncDueViewport, 0);
   }
   function syncDateFromDue(){
     var d = new Date(duePick.due);
@@ -776,7 +779,32 @@
     }
     dateSynced = true;
   }
-  function closeDueSheet(){ $("dueModal").classList.remove("show"); }
+  function closeDueSheet(){
+    dueInputFocused = false;
+    var m = $("dueModal");
+    if (m) {
+      m.classList.remove("show");
+      m.style.height = "";
+      m.style.top = "";
+      m.style.bottom = "";
+    }
+  }
+  function syncDueViewport(){
+    var m = $("dueModal");
+    if (!m) return;
+    if (!dueInputFocused) {
+      m.style.height = "";
+      m.style.top = "";
+      m.style.bottom = "";
+      return;
+    }
+    var vv = window.visualViewport;
+    if (vv && vv.height > 0) {
+      m.style.height = vv.height + "px";
+      m.style.top = vv.offsetTop + "px";
+      m.style.bottom = "auto";
+    }
+  }
   function paintDueSheet(){
     var tabs = $("dueTabs").querySelectorAll(".segbtn");
     for (var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-tab") === dueTab);
@@ -1416,6 +1444,25 @@
       closeDueSheet();
     }
   };
+  $("dueModal").addEventListener("focusin", function(e){
+    if (!e.target || e.target.tagName !== "INPUT") return;
+    dueInputFocused = true;
+    setTimeout(syncDueViewport, 60);
+    setTimeout(syncDueViewport, 320);
+  });
+  $("dueModal").addEventListener("focusout", function(){
+    setTimeout(function(){
+      if (!$("dueModal").contains(document.activeElement)) {
+        dueInputFocused = false;
+        syncDueViewport();
+      }
+    }, 220);
+  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", syncDueViewport);
+    window.visualViewport.addEventListener("scroll", syncDueViewport);
+  }
+  window.addEventListener("resize", syncDueViewport);
   $("styleChips").addEventListener("click", function(e){
     var b = e.target.closest("button[data-s]"); if (!b) return;
     var st = b.getAttribute("data-s");

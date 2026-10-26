@@ -4,7 +4,7 @@
 
 ## 安装
 
-1. 把 `dist\ADHD-lite-android-v0.11.4.apk` 发到手机（微信/QQ/数据线都可）。
+1. 把 `dist\ADHD-lite-android-v0.11.5.apk` 发到手机（微信/QQ/数据线都可）。
 2. 在手机上允许「安装未知来源应用」，安装 APK。
 3. 首次打开会请求通知权限；Android 12+ 再点一次「允许精确闹钟」，并在设置里把电池优化设为「不受限制」，否则提醒可能不准点。
 4. 在电脑端：`ADHD-lite.exe` → 设置 → 手机 / 同步 → 点亮「手机同步」。
@@ -12,6 +12,12 @@
    - 都登录 Tailscale 时用 `http://100.x.x.x:17890`（推荐）；
    - 同一 Wi-Fi 用 `http://192.168.x.x:17890`。
 6. 点「保存并连接」。电脑开着时手机即可增删改、开始/暂停、计时、AI 拆解/取舍。
+
+## v0.11.5 新增
+
+- **键盘不挡截止弹层**：输入延时数字/日期/时间时，用 `window.visualViewport` 把弹层高度和顶部对齐到可视区域，弹层浮在键盘上方；延时预览移到步进器下面。
+- `viewport` 加 `interactive-widget=resizes-content`，Android Chrome/WebView 键盘弹出时布局也会收缩。
+- 截止三页（快速/延时/指定）沿用 v0.11.4。
 
 ## v0.11.4 新增
 
@@ -84,7 +90,7 @@ cd D:\ADHD清单
 powershell -NoProfile -ExecutionPolicy Bypass -File android\build-apk.ps1
 ```
 
-产物：`android\dist\ADHD-lite-android-v0.11.4.apk`（versionCode 16，debug 签名）。
+产物：`android\dist\ADHD-lite-android-v0.11.5.apk`（versionCode 17，debug 签名）。
 
 说明：`aapt2` 在中文路径下会报 `failed to open directory`，脚本会先把 `app/` 复制到 ASCII 临时目录编译。脚本必须保存为 **UTF-8 with BOM**（Windows PowerShell 5.1 否则会把中文注释按 ANSI 解析，变量会变空）。
 
@@ -102,5 +108,5 @@ app/java/com/adhd/lite/
   ApkProvider.java              v0.11 给系统安装器读 update.apk 的最小 ContentProvider
 build-apk.ps1                   aapt2 + javac + d8 + zipalign + apksigner
 debug.keystore                  调试签名（升级 APK 必须用同一个）
-dist/                           生成的 APK（v0.11.4 已提交，便于直接安装）
+dist/                           生成的 APK（v0.11.5 已提交，便于直接安装）
 ```
