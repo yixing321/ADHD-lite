@@ -87,6 +87,12 @@ public final class AlarmScheduler {
         if (json != null) sync(ctx, json);
     }
 
+    // 退后台自检：走真正的 AlarmManager，30 秒后响；用来验证“划掉 App 后还响不响”。
+    public static void testBackground(Context ctx) {
+        long at = System.currentTimeMillis() + 30000;
+        schedule(ctx, "bgtest-" + at, "后台自检：30 秒后应弹通知（响铃+横幅）", "high", at, false);
+    }
+
     private static void schedule(Context ctx, String id, String title, String priority, long due, boolean plan) {
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
@@ -99,16 +105,35 @@ public final class AlarmScheduler {
         i.putExtra("plan", plan);
         PendingIntent pi = PendingIntent.getBroadcast(ctx, Notifications.requestCode(id), i,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        boolean exact = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms();
         try {
-            if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
+            if (exact) {
+                // setAlarmClock 是系统眼里“闹钟”，比普通精确闹钟更不容易被省电/后台限制吞掉。
+                Intent show = new Intent(ctx, MainActivity.class);
+                show.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                show.putExtra("taskId", id);
+                PendingIntent showPi = PendingIntent.getActivity(ctx,
+                        Notifications.requestCode(id) + 1000, show,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                AlarmManager.AlarmClockInfo info = new AlarmManager.AlarmClockInfo(due, showPi);
+                am.setAlarmClock(info, pi);
+                return;
+            }
+            if (Build.VERSION.SDK_INT >= 23) {
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, due, pi);
-            } else if (Build.VERSION.SDK_INT >= 23) {
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, due, pi);
             } else {
-                am.setExact(AlarmManager.RTC_WAKEUP, due, pi);
+                am.set(AlarmManager.RTC_WAKEUP, due, pi);
             }
         } catch (SecurityException e) {
-            try { am.set(AlarmManager.RTC_WAKEUP, due, pi); } catch (Exception ignored) { }
+            try {
+                if (Build.VERSION.SDK_INT >= 23) {
+                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, due, pi);
+                } else {
+                    am.setExact(AlarmManager.RTC_WAKEUP, due, pi);
+                }
+            } catch (Exception ignored) {
+                try { am.set(AlarmManager.RTC_WAKEUP, due, pi); } catch (Exception ignored2) { }
+            }
         } catch (Exception ignored) { }
     }
 

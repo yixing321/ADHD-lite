@@ -221,7 +221,9 @@
         <button class="btn ghost" id="channelBtn">通知通道设置</button>
         <button class="btn ghost" id="exactBtn">允许精确闹钟</button>
         <button class="btn ghost" id="batteryBtn">允许后台运行</button>
+        <button class="btn ghost" id="fullScreenBtn">允许全屏提醒</button>
         <button class="btn ghost" id="testNotify">测试通知（5 秒）</button>
+        <button class="btn ghost" id="bgTestBtn">后台自检（30 秒）</button>
       </div>
       <div class="hint">通知不弹/不响时依次检查：通知权限 → 通知通道（横幅/声音/震动）→ 精确闹钟 → 电池优化。测试通知走「响铃」通道，只验证手机本地，不需要电脑开着。</div>
     </div>
@@ -343,6 +345,7 @@
   var forceSettings = false;
   var inSettings = false;
   var localAppVersion = "";
+  var pendingFocusId = "";
   try {
     var qs0 = new URLSearchParams(location.search);
     var qtab = qs0.get("tab");
@@ -758,12 +761,14 @@
     el.textContent = "通知：" + (s.notifications ? "已允许" : "被关闭") +
       (s.channel === false ? "（通道被关）" : "") +
       " · 响铃：" + (s.sound === false ? "关" : "开") +
-      " · 精确闹钟：" + (s.exact ? "已允许" : "未允许") +
+      " · 精确闹钟：" + (s.exact ? "已允许" : "未允许（退后台可能不响）") +
       " · 后台：" + (s.battery ? "不受限" : "可能受限") +
+      " · 全屏：" + (s.fullscreen === false ? "关" : "开") +
       " · 已排 " + (s.scheduled || 0) + " 个";
     var nb = $("noticeBtn"); if (nb) nb.textContent = s.notifications ? "通知已允许" : "去开启通知";
     var bb = $("batteryBtn"); if (bb) bb.textContent = s.battery ? "后台不受限" : "允许后台运行";
     var eb = $("exactBtn"); if (eb) eb.textContent = s.exact ? "精确闹钟已允许" : "允许精确闹钟";
+    var fb = $("fullScreenBtn"); if (fb) fb.textContent = s.fullscreen === false ? "允许全屏提醒" : "全屏提醒已允许";
   }
 
   function appVersion(){
@@ -831,6 +836,22 @@
   }
 
   function openTask(id){ for (var i=0;i<state.tasks.length;i++) if (state.tasks[i].id===id) return state.tasks[i]; return null; }
+
+  // 从通知/全屏提醒点进来：直接弹「到点了」，可以完成或稍后 15 分。
+  function focusTask(id){
+    if (!state || !state.tasks) { pendingFocusId = id; return; }
+    var t = openTask(id);
+    if (!t) { showToast("找不到这条任务"); return; }
+    showModal("到点了", t.title + "\n" + fmtDue(t.due) + " · " + priName(t.priority), [], false);
+    var ok = $("modalOk");
+    ok.classList.remove("hidden");
+    ok.textContent = "完成";
+    ok.onclick = function(){ closeModal(); act(id, "done", 0); };
+    var cl = $("modalClose");
+    cl.textContent = "稍后 15 分";
+    cl.onclick = function(){ closeModal(); act(id, "postpone", 15); };
+  }
+  window.adhdFocusTask = focusTask;
 
   function optimistic(id, action, minutes){
     var t = openTask(id); if (!t) return;
@@ -952,6 +973,10 @@
     $("modalTitle").textContent = title;
     $("modalBody").textContent = body;
     $("modalSteps").innerHTML = "";
+    $("modalClose").onclick = closeModal;
+    $("modalClose").textContent = "关闭";
+    $("modalOk").onclick = null;
+    $("modalOk").textContent = "加入清单";
     $("modalOk").classList.toggle("hidden", !ok);
     $("modal").classList.add("show");
   }
@@ -1068,6 +1093,11 @@
     var overload = open >= 5 && !isMonth;
     $("overload").classList.toggle("hidden", !overload);
     if (overload) $("overloadText").textContent = "今天有 " + open + " 件待办，先挑一件？";
+    if (pendingFocusId) {
+      var fid = pendingFocusId;
+      pendingFocusId = "";
+      setTimeout(function(){ focusTask(fid); }, 0);
+    }
     refreshUpdateHint();
     tick();
   }
@@ -1108,6 +1138,16 @@
   $("batteryBtn").onclick = function(){
     if (window.AndroidHost && AndroidHost.requestIgnoreBattery) { showToast("正在打开电池优化设置…"); AndroidHost.requestIgnoreBattery(); }
     else showToast("浏览器里不需要；装 APK 后可用");
+  };
+  $("fullScreenBtn").onclick = function(){
+    if (window.AndroidHost && AndroidHost.requestFullScreen) { showToast("正在打开全屏提醒设置…"); AndroidHost.requestFullScreen(); }
+    else showToast("浏览器里不需要；装 APK 后可用");
+  };
+  $("bgTestBtn").onclick = function(){
+    if (window.AndroidHost && AndroidHost.testBackgroundAlarm) {
+      AndroidHost.testBackgroundAlarm();
+      showToast("30 秒内退出后台/锁屏，看是否响铃+横幅");
+    } else showToast("浏览器里不需要；装 APK 后可用");
   };
   $("updateCheckBtn").onclick = function(){ checkUpdate(true); };
   $("updateInstallBtn").onclick = installUpdate;

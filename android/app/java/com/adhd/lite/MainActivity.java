@@ -29,6 +29,7 @@ import java.net.URL;
 
 public class MainActivity extends Activity {
     private WebView web;
+    private String pendingTaskId = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,12 +49,19 @@ public class MainActivity extends Activity {
         s.setBuiltInZoomControls(false);
         s.setJavaScriptCanOpenWindowsAutomatically(false);
         web.setBackgroundColor(0xfff5f7fb);
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                focusPendingTask();
+            }
+        });
         web.addJavascriptInterface(new Bridge(this), "AndroidHost");
         setContentView(web);
         // 用 http 基地址加载内嵌页面：origin 不是 file://，fetch 到桌面 HTTP API 不会被
         // WebView 的文件源限制拦住；页面本身不需要这个域名真的可解析。
         web.loadDataWithBaseURL("http://adhd.local/", readAsset("mobile.html"), "text/html", "UTF-8", null);
+        handleIntent(getIntent());
 
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -65,6 +73,33 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         if (web != null) web.evaluateJavascript("window.adhdResume && window.adhdResume()", null);
+        focusPendingTask();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntent(intent);
+    }
+
+    private void handleIntent(Intent intent) {
+        if (intent == null) return;
+        String id = intent.getStringExtra("taskId");
+        if (id != null && id.length() > 0) {
+            pendingTaskId = id;
+            focusPendingTask();
+        }
+    }
+
+    private void focusPendingTask() {
+        if (web == null || pendingTaskId == null || pendingTaskId.length() == 0) return;
+        String id = pendingTaskId;
+        pendingTaskId = "";
+        try {
+            web.evaluateJavascript("window.adhdFocusTask && window.adhdFocusTask("
+                    + JSONObject.quote(id) + ")", null);
+        } catch (Exception ignored) { }
     }
 
     private String readAsset(String name) {
@@ -148,6 +183,11 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void testBackgroundAlarm() {
+            AlarmScheduler.testBackground(ctx);
+        }
+
+        @JavascriptInterface
         public String getStatus() {
             try {
                 JSONObject o = new JSONObject();
@@ -162,6 +202,7 @@ public class MainActivity extends Activity {
                 o.put("sound", soundOn());
                 o.put("exact", canExactAlarm());
                 o.put("battery", ignoresBattery());
+                o.put("fullscreen", fullScreenOn());
                 o.put("scheduled", AlarmScheduler.scheduledCount(ctx));
                 return o.toString();
             } catch (Exception e) {
@@ -193,12 +234,34 @@ public class MainActivity extends Activity {
             } catch (Exception e) { return false; }
         }
 
+        private boolean fullScreenOn() {
+            if (Build.VERSION.SDK_INT < 34) return true;
+            try {
+                android.app.NotificationManager nm =
+                        (android.app.NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+                return nm != null && nm.canUseFullScreenIntent();
+            } catch (Exception e) { return false; }
+        }
+
         private boolean ignoresBattery() {
             if (Build.VERSION.SDK_INT < 23) return true;
             try {
                 PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
                 return pm != null && pm.isIgnoringBatteryOptimizations(ctx.getPackageName());
             } catch (Exception e) { return false; }
+        }
+
+        @JavascriptInterface
+        public void requestFullScreen() {
+            if (Build.VERSION.SDK_INT < 34) { openNotificationSettings(); return; }
+            try {
+                Intent i = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                        Uri.parse("package:" + ctx.getPackageName()));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                ctx.startActivity(i);
+            } catch (Exception e) {
+                openNotificationSettings();
+            }
         }
 
         @JavascriptInterface

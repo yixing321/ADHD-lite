@@ -4,7 +4,7 @@
 
 ## 安装
 
-1. 把 `dist\ADHD-lite-android-v0.11.2.apk` 发到手机（微信/QQ/数据线都可）。
+1. 把 `dist\ADHD-lite-android-v0.11.3.apk` 发到手机（微信/QQ/数据线都可）。
 2. 在手机上允许「安装未知来源应用」，安装 APK。
 3. 首次打开会请求通知权限；Android 12+ 再点一次「允许精确闹钟」，并在设置里把电池优化设为「不受限制」，否则提醒可能不准点。
 4. 在电脑端：`ADHD-lite.exe` → 设置 → 手机 / 同步 → 点亮「手机同步」。
@@ -12,6 +12,13 @@
    - 都登录 Tailscale 时用 `http://100.x.x.x:17890`（推荐）；
    - 同一 Wi-Fi 用 `http://192.168.x.x:17890`。
 6. 点「保存并连接」。电脑开着时手机即可增删改、开始/暂停、计时、AI 拆解/取舍。
+
+## v0.11.3 新增
+
+- **退后台也提醒**：任务/计划闹钟改用 `AlarmManager.setAlarmClock`（系统按闹钟对待），并注册 `TIME_SET / TIMEZONE_CHANGED / SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED` 自动重排。
+- **全屏提醒**：通知加 `setFullScreenIntent`；点通知或全屏打开会直接弹「到点了」，可「完成」或「稍后 15 分」。
+- **后台自检（30 秒）**：设置页点一下，30 秒内划掉 App/锁屏，验证后台链路。
+- **允许全屏提醒**：Android 14+ 可在设置页打开系统全屏提醒权限；状态行显示「全屏：开/关」。
 
 ## v0.11.2 新增
 
@@ -43,6 +50,7 @@
 - 手机重启后 `BootReceiver` 会从缓存重新排闹钟；
 - 任务在手机上被完成/改期/稍后时，会先更新本地闹钟，再尝试同步电脑。
 - 到点通知走 `adhd_alarm_v1` 响铃通道；如果只有通知栏条目、没有横幅或声音，点「通知通道设置」把「横幅（悬浮通知）/ 声音 / 震动」打开，并检查系统勿扰/静音。
+- 划掉 App 后不响：先点「后台自检（30 秒）」复现；再检查「精确闹钟已允许 / 电池不受限 / 全屏提醒 / 自启动」。v0.11.3 已用 `setAlarmClock` 和全屏提醒加固。
 - 通知不弹时先看设置页：通知权限、通道、响铃、精确闹钟、电池优化（设为「不受限制」）。「测试通知（5 秒）」只验证手机本地通道，不需要电脑开着。
 
 ## 同步 / 离线
@@ -68,7 +76,7 @@ cd D:\ADHD清单
 powershell -NoProfile -ExecutionPolicy Bypass -File android\build-apk.ps1
 ```
 
-产物：`android\dist\ADHD-lite-android-v0.11.2.apk`（versionCode 14，debug 签名）。
+产物：`android\dist\ADHD-lite-android-v0.11.3.apk`（versionCode 15，debug 签名）。
 
 说明：`aapt2` 在中文路径下会报 `failed to open directory`，脚本会先把 `app/` 复制到 ASCII 临时目录编译。脚本必须保存为 **UTF-8 with BOM**（Windows PowerShell 5.1 否则会把中文注释按 ANSI 解析，变量会变空）。
 
@@ -86,5 +94,5 @@ app/java/com/adhd/lite/
   ApkProvider.java              v0.11 给系统安装器读 update.apk 的最小 ContentProvider
 build-apk.ps1                   aapt2 + javac + d8 + zipalign + apksigner
 debug.keystore                  调试签名（升级 APK 必须用同一个）
-dist/                           生成的 APK（v0.11.2 已提交，便于直接安装）
+dist/                           生成的 APK（v0.11.3 已提交，便于直接安装）
 ```

@@ -77,11 +77,12 @@ public final class Notifications {
          .setContentText(text)
          .setStyle(new Notification.BigTextStyle().bigText(text))
          .setContentIntent(pi)
+         .setFullScreenIntent(pi, true)
          .setAutoCancel(true)
          .setWhen(due)
          .setShowWhen(true)
          .setVisibility(Notification.VISIBILITY_PUBLIC)
-         .setCategory(Notification.CATEGORY_REMINDER)
+         .setCategory(Notification.CATEGORY_ALARM)
          .setColor(0xffb05f2e)
          .setOnlyAlertOnce(false);
         b.setPriority(Notification.PRIORITY_HIGH);
