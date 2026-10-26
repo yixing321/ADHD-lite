@@ -156,6 +156,25 @@
   .calcell.out { opacity:.25; }
   .customdue { display:flex; gap:6px; margin-top:8px; }
   .customdue input, .customdue select { width:50%; font-size:12px; padding:8px; }
+  .customdue.single input { width:100%; }
+  .duerow { display:flex; align-items:center; gap:8px; margin-top:9px; }
+  .duerow .label { font-size:11px; color:var(--muted); }
+  .duebtn { flex:1; display:flex; justify-content:space-between; align-items:center;
+    border:1px solid var(--accentLine); background:var(--accentWash); color:var(--accentDeep);
+    border-radius:10px; padding:9px 11px; font-size:13px; font-weight:600; }
+  .caret { color:var(--accent); }
+  .seg { display:flex; gap:6px; margin:10px 0 2px; }
+  .segbtn { flex:1; border:1px solid var(--accentLine); background:var(--accentWash); color:var(--accentDeep);
+    border-radius:9px; padding:7px; font-size:12px; }
+  .segbtn.on { background:var(--accent2); border-color:var(--accent2); color:var(--accentTxt); font-weight:600; }
+  .quickgrid { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:8px; }
+  .quickgrid button { text-align:left; border:1px solid var(--accentLine); background:var(--accentWash);
+    border-radius:10px; padding:9px 10px; font-size:12.5px; color:var(--accentDeep); }
+  .quickgrid small { display:block; color:var(--muted); font-size:10px; margin-top:2px; }
+  .delayrow { display:flex; gap:8px; align-items:center; margin-top:10px; }
+  .delayrow input { width:100%; text-align:center; font-size:18px; font-weight:700; }
+  .stepbtn { width:46px; height:42px; flex:0 0 46px; border-radius:10px;
+    border:1px solid var(--accentLine); background:var(--accentWash); color:var(--accentDeep); font-size:20px; }
   .settingsSec { border-top:1px solid var(--line); margin-top:14px; padding-top:12px; }
   .settingsSec h3 { font-size:13px; margin:0 0 4px; color:var(--txt); }
   .settingsSec h3::before { content:""; display:inline-block; width:3px; height:12px; margin-right:6px;
@@ -263,25 +282,12 @@
         <button class="chip on" data-p="mid">中</button>
         <button class="chip" data-p="low">低</button>
       </div>
-      <div class="chips" id="dueChips">
+      <div class="duerow">
         <span class="label">截止</span>
-        <button class="chip on" data-d="today">今天 23:59</button>
-        <button class="chip" data-d="hour">1 小时后</button>
-        <button class="chip" data-d="tomorrow">明天 21:00</button>
-        <button class="chip" data-d="delay">延时</button>
-        <button class="chip" data-d="custom">自定义</button>
-      </div>
-      <div id="delayDue" class="customdue hidden">
-        <input type="number" id="delayNum" min="1" value="30" inputmode="numeric" aria-label="延时数字">
-        <select id="delayUnit" aria-label="延时单位">
-          <option value="min">分钟后</option>
-          <option value="hour">小时后</option>
-          <option value="sec">秒后</option>
-        </select>
-      </div>
-      <div id="customDue" class="customdue hidden">
-        <input type="date" id="dueDate">
-        <input type="time" id="dueTime" value="21:00">
+        <button class="duebtn" id="dueBtn">
+          <span id="dueLabel">今天 23:59</span>
+          <span class="caret">▾</span>
+        </button>
       </div>
     </div>
 
@@ -319,6 +325,80 @@
   </div>
 </div>
 
+<div class="modal" id="dueModal">
+  <div class="sheet">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h3 style="margin:0">什么时候截止？</h3>
+      <button class="btn ghost tiny" id="dueClose">关闭</button>
+    </div>
+    <div class="seg" id="dueTabs">
+      <button class="segbtn on" data-tab="quick">快速</button>
+      <button class="segbtn" data-tab="delay">延时</button>
+      <button class="segbtn" data-tab="date">指定</button>
+    </div>
+
+    <div id="dueQuick" class="duepane">
+      <div class="quickgrid" id="quickGrid"></div>
+      <div class="hint">点一下直接设定；想更精确用上面的「延时 / 指定」。</div>
+    </div>
+
+    <div id="dueDelayPane" class="duepane hidden">
+      <div class="delayrow">
+        <button class="stepbtn" id="delayMinus" aria-label="减少">−</button>
+        <input id="delayNum" type="number" min="1" value="30" inputmode="numeric" aria-label="延时数字">
+        <button class="stepbtn" id="delayPlus" aria-label="增加">＋</button>
+      </div>
+      <div class="chips" id="delayUnits">
+        <span class="label">单位</span>
+        <button class="chip on" data-u="min">分钟</button>
+        <button class="chip" data-u="hour">小时</button>
+        <button class="chip" data-u="day">天</button>
+      </div>
+      <div class="chips" id="delayQuick">
+        <span class="label">常用</span>
+        <button class="chip" data-n="5">5</button>
+        <button class="chip" data-n="10">10</button>
+        <button class="chip" data-n="15">15</button>
+        <button class="chip" data-n="30">30</button>
+        <button class="chip" data-n="60">60</button>
+        <button class="chip" data-n="120">120</button>
+      </div>
+      <div class="hint" id="delayPreview"></div>
+    </div>
+
+    <div id="dueDatePane" class="duepane hidden">
+      <div class="chips" id="dateQuick">
+        <span class="label">日期</span>
+        <button class="chip on" data-dd="0">今天</button>
+        <button class="chip" data-dd="1">明天</button>
+        <button class="chip" data-dd="2">后天</button>
+        <button class="chip" data-dd="pick">选日期</button>
+      </div>
+      <div id="datePickWrap" class="customdue single hidden">
+        <input type="date" id="dueDate">
+      </div>
+      <div class="chips" id="timeQuick">
+        <span class="label">时间</span>
+        <button class="chip" data-h="09:00">09:00</button>
+        <button class="chip" data-h="12:00">12:00</button>
+        <button class="chip" data-h="18:00">18:00</button>
+        <button class="chip on" data-h="21:00">21:00</button>
+        <button class="chip" data-h="23:59">23:59</button>
+        <button class="chip" data-h="pick">选时间</button>
+      </div>
+      <div id="timePickWrap" class="customdue single hidden">
+        <input type="time" id="dueTime" value="21:00">
+      </div>
+      <div class="hint" id="datePreview"></div>
+    </div>
+
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn ghost" id="dueCancel">取消</button>
+      <button class="btn" id="dueOk">确定</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="modal">
   <div class="sheet">
     <h3 id="modalTitle">提示</h3>
@@ -353,7 +433,13 @@
     forceSettings = qs0.get("settings") === "1";
   } catch(e) {}
   var priority = localStorage.getItem(LS_PRI) || "mid";
-  var dueKind = localStorage.getItem(LS_DUE) || "today";
+  var duePick = { due: todayEndMs(), label: "今天 23:59" };
+  var dueTab = "quick";
+  var delayUnit = "min";
+  var dateBase = 0;
+  var dateTime = "21:00";
+  var datePick = "";
+  var timePick = "";
   var busy = false;
   var pollTimer = null;
   var splitSteps = [];
@@ -644,35 +730,102 @@
     });
   }
 
-  function dueFor(kind){
-    var d = new Date(); var t = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 0, 0);
-    if (kind === "hour") return Date.now() + 3600*1000;
-    if (kind === "tomorrow") { t.setDate(t.getDate()+1); t.setHours(21,0,0,0); return t.getTime(); }
-    if (kind === "delay") {
-      var n = parseInt(($("delayNum") && $("delayNum").value) || "30", 10);
-      if (!(n > 0)) n = 30;
-      var u = ($("delayUnit") && $("delayUnit").value) || "min";
-      var max = u === "hour" ? 168 : (u === "sec" ? 604800 : 10080);
-      if (n > max) n = max;
-      var ms = u === "hour" ? n * 3600000 : (u === "sec" ? n * 1000 : n * 60000);
-      return Date.now() + ms;
-    }
-    if (kind === "custom") {
-      var ds = ($("dueDate").value || "").trim();
-      var ts = ($("dueTime").value || "").trim();
-      if (ds && ts) {
-        var cd = new Date(ds + "T" + ts + ":00");
-        if (!isNaN(cd.getTime())) return cd.getTime();
-      }
-      return Date.now() + 3600*1000;
-    }
-    return t.getTime();
+  function todayEndMs(){
+    var d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 0, 0).getTime();
   }
-  function paintCustomDue(){
-    var box = $("customDue");
-    if (box) box.classList.toggle("hidden", dueKind !== "custom");
-    var delay = $("delayDue");
-    if (delay) delay.classList.toggle("hidden", dueKind !== "delay");
+  function atTime(offset, hm){
+    var d = new Date();
+    d.setDate(d.getDate() + offset);
+    var p = String(hm || "21:00").split(":");
+    d.setHours(parseInt(p[0], 10) || 0, parseInt(p[1], 10) || 0, 0, 0);
+    return d.getTime();
+  }
+  function setDuePick(ms, label){
+    if (!ms) return;
+    duePick = { due: ms, label: label || fmtDue(ms) };
+    var el = $("dueLabel");
+    if (el) el.textContent = duePick.label;
+  }
+  function openDueSheet(tab){
+    dueTab = tab || "quick";
+    $("dueModal").classList.add("show");
+    paintDueSheet();
+  }
+  function closeDueSheet(){ $("dueModal").classList.remove("show"); }
+  function paintDueSheet(){
+    var tabs = $("dueTabs").querySelectorAll(".segbtn");
+    for (var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-tab") === dueTab);
+    $("dueQuick").classList.toggle("hidden", dueTab !== "quick");
+    $("dueDelayPane").classList.toggle("hidden", dueTab !== "delay");
+    $("dueDatePane").classList.toggle("hidden", dueTab !== "date");
+    if (dueTab === "quick") paintQuick();
+    else if (dueTab === "delay") paintDelay();
+    else paintDate();
+  }
+  function paintQuick(){
+    var items = [
+      { m:15, l:"15 分钟后" }, { m:30, l:"30 分钟后" },
+      { m:60, l:"1 小时后" }, { m:180, l:"3 小时后" },
+      { at:[1,"09:00"], l:"明天 09:00" }, { at:[1,"21:00"], l:"明天 21:00" },
+      { at:[2,"09:00"], l:"后天 09:00" }
+    ];
+    var h = "";
+    for (var i=0;i<items.length;i++) {
+      var it = items[i];
+      var ms = it.m ? (Date.now() + it.m*60000) : atTime(it.at[0], it.at[1]);
+      var attr = it.m ? 'data-min="' + it.m + '"' : 'data-at="' + it.at[0] + ',' + it.at[1] + '"';
+      h += '<button ' + attr + '>' + it.l + '<small>' + esc(fmtDue(ms)) + '</small></button>';
+    }
+    h += '<button data-open="date">自定义…<small>选日期 / 时间</small></button>';
+    $("quickGrid").innerHTML = h;
+  }
+  function delayNumValue(){
+    var n = parseInt(($("delayNum") && $("delayNum").value) || "30", 10);
+    if (!(n > 0)) n = 30;
+    var max = delayUnit === "day" ? 365 : (delayUnit === "hour" ? 8760 : 525600);
+    return Math.min(n, max);
+  }
+  function delayMs(){
+    var n = delayNumValue();
+    return n * (delayUnit === "day" ? 86400000 : delayUnit === "hour" ? 3600000 : 60000);
+  }
+  function paintDelay(){
+    var units = $("delayUnits").querySelectorAll("button[data-u]");
+    for (var i=0;i<units.length;i++) units[i].classList.toggle("on", units[i].getAttribute("data-u") === delayUnit);
+    var n = delayNumValue();
+    var unitName = delayUnit === "day" ? " 天" : delayUnit === "hour" ? " 小时" : " 分钟";
+    $("delayPreview").textContent = "延时 " + n + unitName + " · " + fmtDue(Date.now() + delayMs());
+  }
+  function dateOffsetKey(offset){
+    var d = new Date();
+    d.setDate(d.getDate() + Number(offset));
+    return localDateValue(d);
+  }
+  function dateMs(){
+    var ds = dateBase === "pick" ? ($("dueDate").value || "").trim() : dateOffsetKey(dateBase);
+    var ts = timePick === "pick" ? ($("dueTime").value || "").trim() : dateTime;
+    if (!ds || !ts) return 0;
+    var d = new Date(ds + "T" + ts + ":00");
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+  function paintDate(){
+    var ds = $("dateQuick").querySelectorAll("button[data-dd]");
+    for (var i=0;i<ds.length;i++) {
+      var v = ds[i].getAttribute("data-dd");
+      ds[i].classList.toggle("on", dateBase === "pick" ? v === "pick" : v === String(dateBase));
+    }
+    var ts = $("timeQuick").querySelectorAll("button[data-h]");
+    for (var j=0;j<ts.length;j++) {
+      var hv = ts[j].getAttribute("data-h");
+      ts[j].classList.toggle("on", timePick === "pick" ? hv === "pick" : hv === dateTime);
+    }
+    if ($("datePickWrap")) $("datePickWrap").classList.toggle("hidden", dateBase !== "pick");
+    if ($("timePickWrap")) $("timePickWrap").classList.toggle("hidden", timePick !== "pick");
+    if ($("dueDate") && !$("dueDate").value) $("dueDate").value = localDateValue(new Date());
+    if ($("dueTime") && !$("dueTime").value) $("dueTime").value = "21:00";
+    var ms = dateMs();
+    $("datePreview").textContent = ms ? ("截止 " + fmtDue(ms)) : "还没选好日期/时间";
   }
 
   function priName(p){ return p === "high" ? "高" : (p === "low" ? "低" : "中"); }
@@ -887,7 +1040,7 @@
     var title = $("newTitle").value.trim();
     if (!title) { showToast("先写任务名"); return; }
     if (busy) { showToast("正在同步，请稍后再点一次"); return; }
-    var due = dueFor(dueKind);
+    var due = duePick.due;
     if (offline) {
       if (!state) state = {tasks:[]};
       var local = { id:"local-"+Date.now(), title:title, priority:priority, due:due,
@@ -1164,12 +1317,81 @@
     priority = b.getAttribute("data-p"); localStorage.setItem(LS_PRI, priority);
     var all = this.querySelectorAll("button"); for (var i=0;i<all.length;i++) all[i].classList.toggle("on", all[i]===b);
   });
-  $("dueChips").addEventListener("click", function(e){
-    var b = e.target.closest("button[data-d]"); if (!b) return;
-    dueKind = b.getAttribute("data-d"); localStorage.setItem(LS_DUE, dueKind);
-    var all = this.querySelectorAll("button"); for (var i=0;i<all.length;i++) all[i].classList.toggle("on", all[i]===b);
-    paintCustomDue();
+  $("dueBtn").onclick = function(){ openDueSheet("quick"); };
+  $("dueClose").onclick = closeDueSheet;
+  $("dueCancel").onclick = closeDueSheet;
+  $("dueModal").addEventListener("click", function(e){ if (e.target === $("dueModal")) closeDueSheet(); });
+  $("dueTabs").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-tab]"); if (!b) return;
+    dueTab = b.getAttribute("data-tab"); paintDueSheet();
   });
+  $("quickGrid").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if (!b) return;
+    if (b.getAttribute("data-open") === "date") { openDueSheet("date"); return; }
+    var m = b.getAttribute("data-min");
+    if (m) { setDuePick(Date.now() + parseInt(m, 10) * 60000); closeDueSheet(); return; }
+    var at = b.getAttribute("data-at");
+    if (at) {
+      var p = at.split(",");
+      setDuePick(atTime(parseInt(p[0], 10), p[1]));
+      closeDueSheet();
+    }
+  });
+  $("delayUnits").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-u]"); if (!b) return;
+    delayUnit = b.getAttribute("data-u"); paintDelay();
+  });
+  $("delayQuick").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-n]"); if (!b) return;
+    $("delayNum").value = b.getAttribute("data-n"); paintDelay();
+  });
+  $("delayMinus").onclick = function(){
+    var step = delayUnit === "min" ? 5 : 1;
+    $("delayNum").value = Math.max(1, delayNumValue() - step); paintDelay();
+  };
+  $("delayPlus").onclick = function(){
+    var step = delayUnit === "min" ? 5 : 1;
+    $("delayNum").value = delayNumValue() + step; paintDelay();
+  };
+  $("delayNum").addEventListener("input", paintDelay);
+  $("dateQuick").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-dd]"); if (!b) return;
+    var dd = b.getAttribute("data-dd");
+    if (dd === "pick") {
+      dateBase = "pick";
+      if (!$("dueDate").value) $("dueDate").value = localDateValue(new Date());
+    } else {
+      dateBase = parseInt(dd, 10);
+    }
+    paintDate();
+  });
+  $("timeQuick").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-h]"); if (!b) return;
+    var h = b.getAttribute("data-h");
+    if (h === "pick") {
+      timePick = "pick";
+      if (!$("dueTime").value) $("dueTime").value = "21:00";
+    } else {
+      timePick = "";
+      dateTime = h;
+    }
+    paintDate();
+  });
+  $("dueDate").addEventListener("change", paintDate);
+  $("dueTime").addEventListener("change", paintDate);
+  $("dueOk").onclick = function(){
+    if (dueTab === "delay") {
+      setDuePick(Date.now() + delayMs());
+      closeDueSheet();
+    } else if (dueTab === "date") {
+      var ms = dateMs();
+      if (!ms) { showToast("日期/时间没填好"); return; }
+      setDuePick(ms);
+      closeDueSheet();
+    } else {
+      closeDueSheet();
+    }
+  };
   $("styleChips").addEventListener("click", function(e){
     var b = e.target.closest("button[data-s]"); if (!b) return;
     var st = b.getAttribute("data-s");
@@ -1232,9 +1454,6 @@
   function paintChips(){
     var ps = $("priorityChips").querySelectorAll("button[data-p]");
     for (var i=0;i<ps.length;i++) ps[i].classList.toggle("on", ps[i].getAttribute("data-p")===priority);
-    var ds = $("dueChips").querySelectorAll("button[data-d]");
-    for (var j=0;j<ds.length;j++) ds[j].classList.toggle("on", ds[j].getAttribute("data-d")===dueKind);
-    paintCustomDue();
     var ts = document.querySelectorAll(".tabs .tab");
     for (var k=0;k<ts.length;k++) ts[k].classList.toggle("on", ts[k].getAttribute("data-tab")===tab);
   }
@@ -1242,6 +1461,7 @@
     return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);
   }
   if ($("dueDate")) $("dueDate").value = localDateValue(new Date());
+  setDuePick(duePick.due, "今天 23:59");
   paintChips();
   applyTheme();
 
@@ -1264,6 +1484,7 @@
   };
   // Android 硬件返回：设置页 → 主界面；其它 tab → 今天；再按才退出 App。
   window.adhdHandleBack = function(){
+    if ($("dueModal").classList.contains("show")) { closeDueSheet(); return true; }
     if (inSettings) { showMain(); return true; }
     if (tab !== "today") { tab = "today"; paintChips(); render(); return true; }
     return false;
