@@ -442,6 +442,7 @@
   var dateSynced = false;
   var timePick = "";
   var dueInputFocused = false;
+  var nativeVisibleHeight = 0;
   var busy = false;
   var pollTimer = null;
   var splitSteps = [];
@@ -799,12 +800,28 @@
       return;
     }
     var vv = window.visualViewport;
-    if (vv && vv.height > 0) {
-      m.style.height = vv.height + "px";
-      m.style.top = vv.offsetTop + "px";
+    var h = 0;
+    if (vv && vv.height > 0 && (window.innerHeight - vv.height) > 80) {
+      h = vv.height;
+    } else if (nativeVisibleHeight > 100) {
+      // Android 16 / iQOO：WebView 的 visualViewport 不一定随键盘收缩，
+      // 用原生 OnApplyWindowInsets 算出的可见高度兜底。
+      h = nativeVisibleHeight;
+    }
+    if (h > 0) {
+      m.style.height = h + "px";
+      m.style.top = "0px";
       m.style.bottom = "auto";
+    } else {
+      m.style.height = "";
+      m.style.top = "";
+      m.style.bottom = "";
     }
   }
+  window.adhdSetVisibleHeight = function(h){
+    nativeVisibleHeight = Number(h) || 0;
+    syncDueViewport();
+  };
   function paintDueSheet(){
     var tabs = $("dueTabs").querySelectorAll(".segbtn");
     for (var i=0;i<tabs.length;i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-tab") === dueTab);

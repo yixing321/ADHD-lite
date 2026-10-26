@@ -6,12 +6,15 @@ import android.app.AlarmManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.View;
+import android.view.ViewTreeObserver;
+import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebSettings;
@@ -54,13 +57,66 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 focusPendingTask();
+                if (web != null) web.requestApplyInsets();
             }
         });
         web.addJavascriptInterface(new Bridge(this), "AndroidHost");
         setContentView(web);
+        // Android 16 / iQOO：visualViewport 有时不随键盘收缩。
+        // 用原生 IME inset 算出真正可见高度，交给页面把截止弹层抬起来。
+        web.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            @Override
+            public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+                int ime = 0;
+                try {
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        ime = insets.getInsets(WindowInsets.Type.ime()).bottom;
+                    } else {
+                        ime = insets.getSystemWindowInsetBottom();
+                    }
+                } catch (Exception ignored) { }
+                if (ime > 0) {
+                    int screenH = v.getRootView().getHeight();
+                    int visible = Math.min(v.getHeight(), screenH - ime);
+                    if (visible < 100) visible = screenH - ime;
+                    float density = getResources().getDisplayMetrics().density;
+                    if (density <= 0) density = 1f;
+                    final float cssH = visible / density;
+                    if (web != null) {
+                        web.evaluateJavascript("window.adhdSetVisibleHeight && window.adhdSetVisibleHeight("
+                                + cssH + ")", null);
+                    }
+                } else if (web != null) {
+                    web.evaluateJavascript("window.adhdSetVisibleHeight && window.adhdSetVisibleHeight(0)", null);
+                }
+                return insets;
+            }
+        });
+        // 再兜一层：有些 ROM 不派发 IME inset，用“可见显示区域”变化判断键盘。
+        web.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                if (web == null) return;
+                Rect r = new Rect();
+                web.getWindowVisibleDisplayFrame(r);
+                int screenH = web.getRootView().getHeight();
+                int visible = r.bottom - r.top;
+                float density = getResources().getDisplayMetrics().density;
+                if (density <= 0) density = 1f;
+                String js;
+                if (visible > 100 && screenH > visible + 100) {
+                    js = "window.adhdSetVisibleHeight && window.adhdSetVisibleHeight("
+                            + (visible / density) + ")";
+                } else {
+                    js = "window.adhdSetVisibleHeight && window.adhdSetVisibleHeight(0)";
+                }
+                web.evaluateJavascript(js, null);
+            }
+        });
         // 用 http 基地址加载内嵌页面：origin 不是 file://，fetch 到桌面 HTTP API 不会被
         // WebView 的文件源限制拦住；页面本身不需要这个域名真的可解析。
         web.loadDataWithBaseURL("http://adhd.local/", readAsset("mobile.html"), "text/html", "UTF-8", null);
+        web.requestApplyInsets();
         handleIntent(getIntent());
 
         if (Build.VERSION.SDK_INT >= 33
@@ -72,7 +128,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (web != null) web.evaluateJavascript("window.adhdResume && window.adhdResume()", null);
+        if (web != null) {
+            web.evaluateJavascript("window.adhdResume && window.adhdResume()", null);
+            web.requestApplyInsets();
+        }
         focusPendingTask();
     }
 
