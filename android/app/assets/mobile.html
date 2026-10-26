@@ -162,6 +162,12 @@
   .customdue { display:flex; gap:6px; margin-top:8px; }
   .customdue input, .customdue select { width:50%; font-size:12px; padding:8px; }
   .customdue.single input { width:100%; }
+  .timepick { display:flex; gap:9px; margin-top:2px; width:100%; }
+  .timeunit { flex:1; display:flex; align-items:center; gap:5px; background:var(--card2);
+    border:1px solid var(--line); border-radius:10px; padding:6px; }
+  .timeunit b { flex:1; text-align:center; font-size:19px; font-variant-numeric:tabular-nums; }
+  .timeunit small { color:var(--muted); font-size:10px; }
+  .timeunit .stepbtn { width:34px; height:34px; flex:0 0 34px; font-size:18px; }
   .duerow { display:flex; align-items:center; gap:8px; margin-top:9px; }
   .duerow .label { font-size:11px; color:var(--muted); }
   .duebtn { flex:1; display:flex; justify-content:space-between; align-items:center;
@@ -392,7 +398,20 @@
         <button class="chip" data-h="pick">选时间</button>
       </div>
       <div id="timePickWrap" class="customdue single hidden">
-        <input type="time" id="dueTime" value="21:00">
+        <div class="timepick">
+          <div class="timeunit">
+            <button class="stepbtn" id="hourMinus" aria-label="小时减">−</button>
+            <b id="hourVal">21</b>
+            <button class="stepbtn" id="hourPlus" aria-label="小时加">＋</button>
+            <small>时</small>
+          </div>
+          <div class="timeunit">
+            <button class="stepbtn" id="minMinus" aria-label="分钟减">−</button>
+            <b id="minVal">00</b>
+            <button class="stepbtn" id="minPlus" aria-label="分钟加">＋</button>
+            <small>分</small>
+          </div>
+        </div>
       </div>
       <div class="hint" id="datePreview"></div>
     </div>
@@ -443,6 +462,8 @@
   var delayUnit = "min";
   var dateBase = 0;
   var dateTime = "21:00";
+  var pickHour = 21;
+  var pickMinute = 0;
   var dateSynced = false;
   var timePick = "";
   var dueInputFocused = false;
@@ -785,7 +806,8 @@
       dateTime = hm;
     } else {
       timePick = "pick";
-      $("dueTime").value = hm;
+      pickHour = d.getHours();
+      pickMinute = d.getMinutes();
     }
     dateSynced = true;
   }
@@ -886,7 +908,9 @@
   }
   function dateMs(){
     var ds = dateBase === "pick" ? ($("dueDate").value || "").trim() : dateOffsetKey(dateBase);
-    var ts = timePick === "pick" ? ($("dueTime").value || "").trim() : dateTime;
+    var ts = timePick === "pick"
+      ? (("0" + pickHour).slice(-2) + ":" + ("0" + pickMinute).slice(-2))
+      : dateTime;
     if (!ds || !ts) return 0;
     var d = new Date(ds + "T" + ts + ":00");
     return isNaN(d.getTime()) ? 0 : d.getTime();
@@ -905,7 +929,8 @@
     if ($("datePickWrap")) $("datePickWrap").classList.toggle("hidden", dateBase !== "pick");
     if ($("timePickWrap")) $("timePickWrap").classList.toggle("hidden", timePick !== "pick");
     if ($("dueDate") && !$("dueDate").value) $("dueDate").value = localDateValue(new Date());
-    if ($("dueTime") && !$("dueTime").value) $("dueTime").value = "21:00";
+    if ($("hourVal")) $("hourVal").textContent = ("0" + pickHour).slice(-2);
+    if ($("minVal")) $("minVal").textContent = ("0" + pickMinute).slice(-2);
     var ms = dateMs();
     $("datePreview").textContent = ms ? ("截止 " + fmtDue(ms)) : "还没选好日期/时间";
   }
@@ -1451,16 +1476,23 @@
     var b = e.target.closest("button[data-h]"); if (!b) return;
     var h = b.getAttribute("data-h");
     if (h === "pick") {
+      if (timePick !== "pick") {
+        var p = dateTime.split(":");
+        pickHour = parseInt(p[0], 10) || 0;
+        pickMinute = parseInt(p[1], 10) || 0;
+      }
       timePick = "pick";
-      if (!$("dueTime").value) $("dueTime").value = "21:00";
     } else {
       timePick = "";
       dateTime = h;
     }
     paintDate();
   });
+  $("hourMinus").onclick = function(){ pickHour = (pickHour + 23) % 24; timePick = "pick"; paintDate(); };
+  $("hourPlus").onclick = function(){ pickHour = (pickHour + 1) % 24; timePick = "pick"; paintDate(); };
+  $("minMinus").onclick = function(){ pickMinute = (pickMinute + 55) % 60; timePick = "pick"; paintDate(); };
+  $("minPlus").onclick = function(){ pickMinute = (pickMinute + 5) % 60; timePick = "pick"; paintDate(); };
   $("dueDate").addEventListener("change", paintDate);
-  $("dueTime").addEventListener("change", paintDate);
   $("dueOk").onclick = function(){
     if (dueTab === "delay") {
       setDuePick(Date.now() + delayMs());
