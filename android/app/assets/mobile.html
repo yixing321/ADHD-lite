@@ -438,7 +438,7 @@
   var delayUnit = "min";
   var dateBase = 0;
   var dateTime = "21:00";
-  var datePick = "";
+  var dateSynced = false;
   var timePick = "";
   var busy = false;
   var pollTimer = null;
@@ -744,13 +744,37 @@
   function setDuePick(ms, label){
     if (!ms) return;
     duePick = { due: ms, label: label || fmtDue(ms) };
+    dateSynced = false;
     var el = $("dueLabel");
     if (el) el.textContent = duePick.label;
   }
   function openDueSheet(tab){
     dueTab = tab || "quick";
     $("dueModal").classList.add("show");
+    if (dueTab === "date" && !dateSynced) syncDateFromDue();
     paintDueSheet();
+  }
+  function syncDateFromDue(){
+    var d = new Date(duePick.due);
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    var day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    var diff = Math.round((day - start) / 86400000);
+    if (diff >= 0 && diff <= 2) {
+      dateBase = diff;
+    } else {
+      dateBase = "pick";
+      $("dueDate").value = localDateValue(d);
+    }
+    var hm = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+    if (["09:00","12:00","18:00","21:00","23:59"].indexOf(hm) >= 0) {
+      timePick = "";
+      dateTime = hm;
+    } else {
+      timePick = "pick";
+      $("dueTime").value = hm;
+    }
+    dateSynced = true;
   }
   function closeDueSheet(){ $("dueModal").classList.remove("show"); }
   function paintDueSheet(){
