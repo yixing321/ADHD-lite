@@ -110,6 +110,10 @@
   .modal { position:fixed; inset:0; background:rgba(0,0,0,.62); display:none; z-index:50; padding:18px; }
   .modal.show { display:flex; align-items:flex-end; }
   .modal .sheet { max-height:calc(100% - 36px); }
+  /* 最后的兜底：一碰输入框就把截止弹层移到屏幕上半部。
+     这样即使 ROM 完全不上报键盘高度，输入框和预览也不会被键盘盖住。 */
+  #dueModal.kbd { align-items:flex-start; padding-top:8px; }
+  #dueModal.kbd .sheet { max-height:62vh; }
   .sheet { width:100%; max-width:720px; margin:0 auto; background:var(--card); border:1px solid var(--line);
     border-radius:16px; padding:14px; max-height:82vh; overflow:auto; }
   .sheet h3 { margin:0 0 8px; font-size:15px; }
@@ -753,10 +757,15 @@
   }
   function openDueSheet(tab){
     dueTab = tab || "quick";
+    $("dueModal").classList.remove("kbd");
     $("dueModal").classList.add("show");
     if (dueTab === "date" && !dateSynced) syncDateFromDue();
     paintDueSheet();
     setTimeout(syncDueViewport, 0);
+  }
+  function setDueKeyboardMode(on){
+    var m = $("dueModal");
+    if (m) m.classList.toggle("kbd", !!on);
   }
   function syncDateFromDue(){
     var d = new Date(duePick.due);
@@ -785,6 +794,7 @@
     var m = $("dueModal");
     if (m) {
       m.classList.remove("show");
+      m.classList.remove("kbd");
       m.style.height = "";
       m.style.top = "";
       m.style.bottom = "";
@@ -1464,9 +1474,18 @@
       closeDueSheet();
     }
   };
+  $("dueModal").addEventListener("pointerdown", function(e){
+    if (e.target && e.target.tagName === "INPUT") {
+      setDueKeyboardMode(true);
+      dueInputFocused = true;
+      setTimeout(syncDueViewport, 60);
+      setTimeout(syncDueViewport, 320);
+    }
+  }, true);
   $("dueModal").addEventListener("focusin", function(e){
     if (!e.target || e.target.tagName !== "INPUT") return;
     dueInputFocused = true;
+    setDueKeyboardMode(true);
     setTimeout(syncDueViewport, 60);
     setTimeout(syncDueViewport, 320);
   });
@@ -1474,6 +1493,7 @@
     setTimeout(function(){
       if (!$("dueModal").contains(document.activeElement)) {
         dueInputFocused = false;
+        setDueKeyboardMode(false);
         syncDueViewport();
       }
     }, 220);
