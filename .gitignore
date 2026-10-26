@@ -1,0 +1,20 @@
+# 运行时数据（含个人任务和 API Key，不进版本库）
+data/
+
+# 早期废弃的两套实现
+_electron_fallback/
+_script_fallback/
+
+# 打包产物
+/dist/
+android/build/
+
+# 编译中间产物
+node_modules/
+.cache/
+bin/
+obj/
+
+# 日志 / 临时文件
+*.log
+*.tmp

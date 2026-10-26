@@ -1,0 +1,80 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="提醒" Width="480" SizeToContent="Height"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False" ResizeMode="NoResize"
+        WindowStartupLocation="Manual" FontFamily="Microsoft YaHei UI, Segoe UI">
+  <Window.Resources>
+    <Style x:Key="RBtn" TargetType="Button">
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="bd" CornerRadius="10" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="bd" Property="Opacity" Value="0.86"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+  <Border CornerRadius="18" Background="#FFFDF9" BorderBrush="#E8E1D6" BorderThickness="1"
+          Padding="18,15,18,14">
+    <StackPanel>
+      <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+        <Border x:Name="BadgeBox" CornerRadius="9" Padding="8,1" Background="#F8F1E2"
+                BorderBrush="#ECDFC6" BorderThickness="1">
+          <TextBlock x:Name="BadgeText" Text="中" FontSize="11" Foreground="#9C7A35"/>
+        </Border>
+        <TextBlock x:Name="LabelText" Text="提醒" FontSize="13" Foreground="#8D857A"
+                   Margin="8,0,0,0" VerticalAlignment="Center"/>
+        <TextBlock x:Name="DueText" Text="" FontSize="11" Foreground="#B3AA9C"
+                   HorizontalAlignment="Right" VerticalAlignment="Center" Margin="10,0,0,0"/>
+      </StackPanel>
+
+      <TextBlock x:Name="TitleText" Text="（未命名）" FontSize="19" FontWeight="SemiBold"
+                 Foreground="#37332D" TextWrapping="Wrap" Margin="0,0,0,4"/>
+
+      <TextBlock x:Name="TipText" Text="" FontSize="11.5" Foreground="#8D857A"
+                 TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <Button x:Name="BtnStart" Grid.Column="0" Style="{StaticResource RBtn}"
+                Content="开始做" FontSize="12.5"
+                Foreground="#2F5F51" Background="#FFFFFF" BorderBrush="#A9CBBE"
+                BorderThickness="1" Padding="10,9" Margin="0,0,6,0"/>
+        <Button x:Name="BtnDone" Grid.Column="1" Style="{StaticResource RBtn}"
+                Content="完成  Enter" FontSize="12.5"
+                Foreground="#FBFDFC" Background="#7D9A90" BorderThickness="0"
+                Padding="0,9" Margin="0,0,6,0"/>
+        <Button x:Name="BtnSnooze" Grid.Column="2" Style="{StaticResource RBtn}"
+                Content="稍后 1 小时" FontSize="12.5"
+                Foreground="#8D857A" Background="#F6F3EE" BorderBrush="#E8E1D6"
+                BorderThickness="1" Padding="10,9" Margin="0,0,6,0"/>
+        <Button x:Name="BtnSnoozeCustom" Grid.Column="3" Style="{StaticResource RBtn}"
+                Content="自定义…" FontSize="12.5"
+                Foreground="#8D857A" Background="#F6F3EE" BorderBrush="#E8E1D6"
+                BorderThickness="1" Padding="10,9" Margin="0,0,6,0"/>
+        <Button x:Name="BtnIgnore" Grid.Column="4" Style="{StaticResource RBtn}"
+                Content="忽略  Esc" FontSize="12.5"
+                Foreground="#B3AA9C" Background="#F6F3EE" BorderBrush="#E8E1D6"
+                BorderThickness="1" Padding="10,9"/>
+      </Grid>
+    </StackPanel>
+  </Border>
+</Window>

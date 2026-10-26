@@ -1,0 +1,288 @@
+// 鑷姩鐢熸垚锛屽嬁鎵嬫敼銆傛潵婧愶細ui/popup.xaml銆乽i/reminder.xaml锛坱ools/gen-ui.ps1锛塦r
+namespace AdhdLite
+{
+    public static class Ui
+    {
+        public const string PopupXaml = @"
+<Window xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+        xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
+        Title=""记一件事"" Width=""560"" SizeToContent=""Height""
+        WindowStyle=""None"" AllowsTransparency=""True"" Background=""Transparent""
+        Topmost=""True"" ShowInTaskbar=""False"" ResizeMode=""NoResize""
+        WindowStartupLocation=""Manual"" FontFamily=""Microsoft YaHei UI, Segoe UI"">
+  <Window.Resources>
+    <Style x:Key=""Chip"" TargetType=""Button"">
+      <Setter Property=""FontSize"" Value=""12""/>
+      <Setter Property=""Foreground"" Value=""#8D857A""/>
+      <Setter Property=""Background"" Value=""#FFFDF9""/>
+      <Setter Property=""BorderBrush"" Value=""#E8E1D6""/>
+      <Setter Property=""Padding"" Value=""11,4""/>
+      <Setter Property=""Margin"" Value=""0,0,6,0""/>
+      <Setter Property=""Cursor"" Value=""Hand""/>
+      <Setter Property=""FocusVisualStyle"" Value=""{x:Null}""/>
+      <Setter Property=""Template"">
+        <Setter.Value>
+          <ControlTemplate TargetType=""Button"">
+            <Border x:Name=""bd"" CornerRadius=""10"" Background=""{TemplateBinding Background}""
+                    BorderBrush=""{TemplateBinding BorderBrush}"" BorderThickness=""1""
+                    Padding=""{TemplateBinding Padding}"">
+              <ContentPresenter HorizontalAlignment=""Center"" VerticalAlignment=""Center""/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property=""IsMouseOver"" Value=""True"">
+                <Setter TargetName=""bd"" Property=""BorderBrush"" Value=""#D9CFC0""/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <!-- Seg：分段按钮。悬停用叠加层而不是改 Background，
+         否则鼠标停在按钮上时""选中色""会被悬停色盖掉 —— 看起来像是点了没反应 -->
+    <Style x:Key=""Seg"" TargetType=""Button"">
+      <Setter Property=""FontSize"" Value=""12""/>
+      <Setter Property=""Foreground"" Value=""#8D857A""/>
+      <Setter Property=""Background"" Value=""Transparent""/>
+      <Setter Property=""BorderBrush"" Value=""Transparent""/>
+      <Setter Property=""BorderThickness"" Value=""1""/>
+      <Setter Property=""Padding"" Value=""11,5""/>
+      <Setter Property=""Cursor"" Value=""Hand""/>
+      <Setter Property=""FocusVisualStyle"" Value=""{x:Null}""/>
+      <Setter Property=""Template"">
+        <Setter.Value>
+          <ControlTemplate TargetType=""Button"">
+            <Border x:Name=""bd"" CornerRadius=""8"" Background=""{TemplateBinding Background}""
+                    BorderBrush=""{TemplateBinding BorderBrush}"" BorderThickness=""{TemplateBinding BorderThickness}""
+                    Padding=""{TemplateBinding Padding}"">
+              <Grid>
+                <ContentPresenter HorizontalAlignment=""Center"" VerticalAlignment=""Center""/>
+                <Border x:Name=""hl"" CornerRadius=""8"" Background=""#10000000"" Opacity=""0""
+                        IsHitTestVisible=""False""/>
+              </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property=""IsMouseOver"" Value=""True"">
+                <Setter TargetName=""hl"" Property=""Opacity"" Value=""1""/>
+              </Trigger>
+              <Trigger Property=""IsPressed"" Value=""True"">
+                <Setter TargetName=""hl"" Property=""Opacity"" Value=""1""/>
+                <Setter TargetName=""hl"" Property=""Background"" Value=""#24000000""/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+
+  <Border CornerRadius=""18"" Background=""#F6F3EE"" BorderBrush=""#E8E1D6"" BorderThickness=""1""
+          Padding=""20,14,20,12"">
+    <Grid>
+      <Border x:Name=""DecoScene"" Width=""150"" Height=""150"" HorizontalAlignment=""Right""
+              VerticalAlignment=""Bottom"" Margin=""0,0,4,-4"" IsHitTestVisible=""False""/>
+      <StackPanel>
+
+      <Grid x:Name=""DragBar"" Background=""Transparent"" Margin=""0,0,0,12"">
+        <StackPanel Orientation=""Horizontal"">
+          <Ellipse Width=""7"" Height=""7"" Fill=""#7D9A90"" VerticalAlignment=""Center""/>
+          <TextBlock Text=""记一件事"" Margin=""8,0,0,0"" FontSize=""13"" Foreground=""#8D857A""
+                     VerticalAlignment=""Center""/>
+        </StackPanel>
+        <Border x:Name=""DecoHost"" Width=""64"" Height=""64"" HorizontalAlignment=""Right""
+                VerticalAlignment=""Center"" Margin=""0,0,100,0"" IsHitTestVisible=""False""/>
+        <Border HorizontalAlignment=""Right"" Background=""#FFFDF9"" BorderBrush=""#E8E1D6""
+                BorderThickness=""1"" CornerRadius=""9"" Padding=""9,2""
+                VerticalAlignment=""Center"">
+          <TextBlock x:Name=""HotkeyText"" Text=""Shift+Tab"" FontSize=""11"" Foreground=""#B3AA9C""/>
+        </Border>
+      </Grid>
+
+      <Grid Margin=""0,0,0,14"">
+        <TextBox x:Name=""TitleBox"" FontSize=""22"" FontWeight=""Medium"" Foreground=""#37332D""
+                 Background=""Transparent"" BorderThickness=""0"" CaretBrush=""#7D9A90""
+                 VerticalContentAlignment=""Center"" Padding=""0"" TextWrapping=""NoWrap""/>
+        <TextBlock x:Name=""Placeholder"" Text=""要做什么？回车保存"" FontSize=""22""
+                   Foreground=""#BEB6A9"" IsHitTestVisible=""False"" VerticalAlignment=""Center""
+                   Margin=""2,0,0,0""/>
+      </Grid>
+
+      <StackPanel Orientation=""Horizontal"" Margin=""0,0,0,10"">
+        <TextBlock Text=""截止"" FontSize=""12"" Foreground=""#B3AA9C"" Width=""28""
+                   VerticalAlignment=""Center""/>
+        <Button x:Name=""ChipToday""    Style=""{StaticResource Chip}"" Content=""今天""/>
+        <Button x:Name=""ChipTomorrow"" Style=""{StaticResource Chip}"" Content=""明天""/>
+        <Button x:Name=""ChipIn5""      Style=""{StaticResource Chip}"" Content=""5 分钟后""/>
+        <Button x:Name=""ChipIn10""     Style=""{StaticResource Chip}"" Content=""10 分钟后""/>
+        <Button x:Name=""ChipCustom""   Style=""{StaticResource Chip}"" Content=""自定义…""/>
+      </StackPanel>
+
+      <!-- 自定义时间：两种方式二选一，当前用哪一种一眼可见 -->
+      <StackPanel x:Name=""CustomRow"" Orientation=""Horizontal"" Margin=""28,0,0,10""
+                  Visibility=""Collapsed"">
+        <Border Background=""#FFFDF9"" BorderBrush=""#E8E1D6"" BorderThickness=""1""
+                CornerRadius=""9"" Margin=""0,0,10,0"">
+          <StackPanel Orientation=""Horizontal"">
+            <Button x:Name=""ModeDelay"" Style=""{StaticResource Seg}"" Content=""延时""
+                    FontSize=""11.5"" Padding=""10,3""/>
+            <Button x:Name=""ModeDate""  Style=""{StaticResource Seg}"" Content=""指定日期""
+                    FontSize=""11.5"" Padding=""10,3""/>
+          </StackPanel>
+        </Border>
+
+        <!-- 延时模式 -->
+        <TextBox x:Name=""DelayBox"" Width=""46"" FontSize=""12"" Padding=""6,3""
+                 TextAlignment=""Center"" VerticalContentAlignment=""Center""
+                 Background=""#FFFDF9"" BorderBrush=""#E8E1D6"" BorderThickness=""1""
+                 Foreground=""#37332D"" Text=""30""/>
+        <Button x:Name=""DelayUnit"" Content=""分"" Width=""52"" FontSize=""12"" Margin=""6,0,0,0""
+                Foreground=""#37332D"" Background=""#FFFDF9"" BorderBrush=""#E8E1D6""
+                BorderThickness=""1"" Padding=""6,3"" Cursor=""Hand""/>
+        <TextBlock x:Name=""DelaySuffix"" Text=""后提醒"" FontSize=""11"" Foreground=""#B3AA9C""
+                   VerticalAlignment=""Center"" Margin=""8,0,0,0""/>
+
+        <!-- 指定日期模式 -->
+        <TextBox x:Name=""DateBox"" Width=""92"" FontSize=""12"" Padding=""6,3""
+                 VerticalContentAlignment=""Center"" Visibility=""Collapsed""
+                 Background=""#FFFDF9"" BorderBrush=""#E8E1D6"" BorderThickness=""1""
+                 Foreground=""#37332D"" Text=""""/>
+        <TextBox x:Name=""TimeBox"" Width=""56"" FontSize=""12"" Padding=""6,3"" Margin=""6,0,0,0""
+                 VerticalContentAlignment=""Center"" Visibility=""Collapsed""
+                 Background=""#FFFDF9"" BorderBrush=""#E8E1D6"" BorderThickness=""1""
+                 Foreground=""#37332D"" Text=""21:00""/>
+        <TextBlock x:Name=""DateFormatHint"" Text=""格式 2026-10-25"" FontSize=""11""
+                   Foreground=""#B3AA9C"" VerticalAlignment=""Center"" Margin=""8,0,0,0""
+                   Visibility=""Collapsed""/>
+      </StackPanel>
+
+      <StackPanel Orientation=""Horizontal"" Margin=""0,0,0,4"">
+        <TextBlock Text=""重要"" FontSize=""12"" Foreground=""#B3AA9C"" Width=""28""
+                   VerticalAlignment=""Center""/>
+        <Border Background=""#FFFDF9"" BorderBrush=""#E8E1D6"" BorderThickness=""1"" CornerRadius=""10"">
+          <StackPanel Orientation=""Horizontal"">
+            <Button x:Name=""SegHigh"" Style=""{StaticResource Seg}"">
+              <StackPanel Orientation=""Horizontal"">
+                <TextBlock Text=""高""/>
+                <TextBlock Text=""Ctrl+1"" FontSize=""10"" Foreground=""#B3AA9C"" Margin=""5,0,0,0""/>
+              </StackPanel>
+            </Button>
+            <Button x:Name=""SegMid"" Style=""{StaticResource Seg}"">
+              <StackPanel Orientation=""Horizontal"">
+                <TextBlock Text=""中""/>
+                <TextBlock Text=""Ctrl+2"" FontSize=""10"" Foreground=""#B3AA9C"" Margin=""5,0,0,0""/>
+              </StackPanel>
+            </Button>
+            <Button x:Name=""SegLow"" Style=""{StaticResource Seg}"">
+              <StackPanel Orientation=""Horizontal"">
+                <TextBlock Text=""低""/>
+                <TextBlock Text=""Ctrl+3"" FontSize=""10"" Foreground=""#B3AA9C"" Margin=""5,0,0,0""/>
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <TextBlock x:Name=""HintText"" Text="""" FontSize=""11"" Foreground=""#C47B6D""
+                 Margin=""28,8,0,0"" TextTrimming=""CharacterEllipsis"" TextWrapping=""NoWrap""/>
+
+      <Grid Margin=""0,10,0,0"">
+        <StackPanel Orientation=""Horizontal"">
+          <TextBlock x:Name=""SummaryText"" Text=""今天 0 · 逾期 0 · 未完成 0"" FontSize=""11""
+                     Foreground=""#B3AA9C""/>
+        </StackPanel>
+        <StackPanel Orientation=""Horizontal"" HorizontalAlignment=""Right"">
+          <TextBlock Text=""Enter 保存 · Esc 关闭"" FontSize=""11"" Foreground=""#B3AA9C""/>
+          <Button x:Name=""QuitBtn"" Content=""退出"" FontSize=""11"" Foreground=""#B3AA9C""
+                  Background=""Transparent"" BorderThickness=""0"" Margin=""10,0,0,0""
+                  Cursor=""Hand"" Padding=""2,0""/>
+        </StackPanel>
+      </Grid>
+
+    </StackPanel>
+    </Grid>
+  </Border>
+</Window>
+";
+        public const string ReminderXaml = @"
+<Window xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+        xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
+        Title=""提醒"" Width=""480"" SizeToContent=""Height""
+        WindowStyle=""None"" AllowsTransparency=""True"" Background=""Transparent""
+        Topmost=""True"" ShowInTaskbar=""False"" ShowActivated=""False"" ResizeMode=""NoResize""
+        WindowStartupLocation=""Manual"" FontFamily=""Microsoft YaHei UI, Segoe UI"">
+  <Window.Resources>
+    <Style x:Key=""RBtn"" TargetType=""Button"">
+      <Setter Property=""FocusVisualStyle"" Value=""{x:Null}""/>
+      <Setter Property=""Cursor"" Value=""Hand""/>
+      <Setter Property=""Template"">
+        <Setter.Value>
+          <ControlTemplate TargetType=""Button"">
+            <Border x:Name=""bd"" CornerRadius=""10"" Background=""{TemplateBinding Background}""
+                    BorderBrush=""{TemplateBinding BorderBrush}"" BorderThickness=""{TemplateBinding BorderThickness}""
+                    Padding=""{TemplateBinding Padding}"">
+              <ContentPresenter HorizontalAlignment=""Center"" VerticalAlignment=""Center""/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property=""IsMouseOver"" Value=""True"">
+                <Setter TargetName=""bd"" Property=""Opacity"" Value=""0.86""/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+  <Border CornerRadius=""18"" Background=""#FFFDF9"" BorderBrush=""#E8E1D6"" BorderThickness=""1""
+          Padding=""18,15,18,14"">
+    <StackPanel>
+      <StackPanel Orientation=""Horizontal"" Margin=""0,0,0,10"">
+        <Border x:Name=""BadgeBox"" CornerRadius=""9"" Padding=""8,1"" Background=""#F8F1E2""
+                BorderBrush=""#ECDFC6"" BorderThickness=""1"">
+          <TextBlock x:Name=""BadgeText"" Text=""中"" FontSize=""11"" Foreground=""#9C7A35""/>
+        </Border>
+        <TextBlock x:Name=""LabelText"" Text=""提醒"" FontSize=""13"" Foreground=""#8D857A""
+                   Margin=""8,0,0,0"" VerticalAlignment=""Center""/>
+        <TextBlock x:Name=""DueText"" Text="""" FontSize=""11"" Foreground=""#B3AA9C""
+                   HorizontalAlignment=""Right"" VerticalAlignment=""Center"" Margin=""10,0,0,0""/>
+      </StackPanel>
+
+      <TextBlock x:Name=""TitleText"" Text=""（未命名）"" FontSize=""19"" FontWeight=""SemiBold""
+                 Foreground=""#37332D"" TextWrapping=""Wrap"" Margin=""0,0,0,4""/>
+
+      <TextBlock x:Name=""TipText"" Text="""" FontSize=""11.5"" Foreground=""#8D857A""
+                 TextWrapping=""Wrap"" Margin=""0,0,0,12""/>
+
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width=""Auto""/>
+          <ColumnDefinition Width=""*""/>
+          <ColumnDefinition Width=""Auto""/>
+          <ColumnDefinition Width=""Auto""/>
+          <ColumnDefinition Width=""Auto""/>
+        </Grid.ColumnDefinitions>
+        <Button x:Name=""BtnStart"" Grid.Column=""0"" Style=""{StaticResource RBtn}""
+                Content=""开始做"" FontSize=""12.5""
+                Foreground=""#2F5F51"" Background=""#FFFFFF"" BorderBrush=""#A9CBBE""
+                BorderThickness=""1"" Padding=""10,9"" Margin=""0,0,6,0""/>
+        <Button x:Name=""BtnDone"" Grid.Column=""1"" Style=""{StaticResource RBtn}""
+                Content=""完成  Enter"" FontSize=""12.5""
+                Foreground=""#FBFDFC"" Background=""#7D9A90"" BorderThickness=""0""
+                Padding=""0,9"" Margin=""0,0,6,0""/>
+        <Button x:Name=""BtnSnooze"" Grid.Column=""2"" Style=""{StaticResource RBtn}""
+                Content=""稍后 1 小时"" FontSize=""12.5""
+                Foreground=""#8D857A"" Background=""#F6F3EE"" BorderBrush=""#E8E1D6""
+                BorderThickness=""1"" Padding=""10,9"" Margin=""0,0,6,0""/>
+        <Button x:Name=""BtnSnoozeCustom"" Grid.Column=""3"" Style=""{StaticResource RBtn}""
+                Content=""自定义…"" FontSize=""12.5""
+                Foreground=""#8D857A"" Background=""#F6F3EE"" BorderBrush=""#E8E1D6""
+                BorderThickness=""1"" Padding=""10,9"" Margin=""0,0,6,0""/>
+        <Button x:Name=""BtnIgnore"" Grid.Column=""4"" Style=""{StaticResource RBtn}""
+                Content=""忽略  Esc"" FontSize=""12.5""
+                Foreground=""#B3AA9C"" Background=""#F6F3EE"" BorderBrush=""#E8E1D6""
+                BorderThickness=""1"" Padding=""10,9""/>
+      </Grid>
+    </StackPanel>
+  </Border>
+</Window>
+";
+    }
+}

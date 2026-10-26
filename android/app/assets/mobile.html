@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1419">
+<title>ADHD-lite</title>
+<style>
+  /* 默认是「柔和 · 暖砂 · 浅色」；具体颜色由 applyTheme() 写到 <html> 的内联变量，
+     这里只做首屏兜底，避免 JS 执行前闪一下深色。 */
+  :root {
+    --bg:#F4EEE4; --card:#FFFDF8; --card2:#EDE5D8; --line:#DCCFBE;
+    --txt:#2F2A24; --sub:#675E52; --muted:#948878;
+    --accent:#B05F2E; --accentDeep:#854422; --accent2:#9A5228;
+    --accentSoft:rgba(176,95,46,.14); --accentLine:rgba(176,95,46,.38);
+    --accentWash:rgba(176,95,46,.055); --accentTxt:#ffffff;
+    --glow:rgba(176,95,46,.20); --glow2:rgba(176,95,46,.08);
+    --green:#1f9d63; --orange:#d9822b; --red:#d9534f; --purple:#7a6b92;
+    --redSoft:rgba(217,83,79,.13); --orangeSoft:rgba(217,130,43,.14); --greenSoft:rgba(31,157,99,.13);
+    --warnBg:#fff4e5; --warnLine:#f0c48a; --warnTxt:#8a5a1f;
+    --pattern:repeating-linear-gradient(135deg, transparent 0 17px, rgba(176,95,46,.16) 17px 18px), radial-gradient(circle, rgba(176,95,46,.20) 1.3px, transparent 1.4px) 0 0/14px 14px;
+    --shadow:0 6px 18px rgba(60,45,30,.08);
+  }
+  body::before {
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(900px 520px at 105% -12%, var(--glow), transparent 62%),
+      radial-gradient(700px 420px at -18% 38%, var(--glow2), transparent 62%),
+      repeating-linear-gradient(135deg, transparent 0 22px, rgba(255,255,255,.018) 22px 23px);
+  }
+  /* 右下角留白里的纹样：不挡点击，只在空处露一点颜色。 */
+  body::after {
+    content:""; position:fixed; right:-76px; bottom:-76px; width:300px; height:300px;
+    border-radius:50%; background:var(--pattern); opacity:.20; pointer-events:none; z-index:-1;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; padding:0; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif; }
+  body { padding-bottom:24px; overflow-x:hidden; color-scheme:dark; }
+  body.light { color-scheme:light; }
+  .wrap { max-width:720px; margin:0 auto; padding:14px 14px 0; width:100%; }
+  header { display:flex; align-items:center; gap:10px; position:relative; overflow:hidden;
+    margin:0 -14px 10px; padding:14px 16px 12px; border-radius:0 0 20px 20px;
+    background:linear-gradient(150deg, var(--accentSoft), transparent 78%);
+    border-bottom:1px solid var(--accentLine); }
+  header::after { content:""; position:absolute; inset:0; background:var(--pattern); opacity:.34; pointer-events:none; }
+  header > * { position:relative; z-index:1; }
+  .brand { font-size:19px; font-weight:700; letter-spacing:.2px; }
+  .brand span { color:var(--accent); }
+  .sync { flex:1; font-size:11px; color:var(--sub); text-align:right; }
+  .dot { width:7px; height:7px; border-radius:50%; display:inline-block; background:var(--muted); margin-right:5px; }
+  .dot.on { background:var(--green); box-shadow:0 0 8px rgba(47,191,113,.6); }
+  .dot.off { background:var(--orange); }
+  .iconbtn { border:1px solid var(--accentLine); background:var(--card); color:var(--accentDeep);
+    border-radius:10px; padding:7px 10px; font-size:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:10px; }
+  .addrow { display:flex; gap:8px; }
+  input, textarea, select { flex:1; min-width:0; background:var(--card2); color:var(--txt);
+    border:1px solid var(--line); border-radius:10px; padding:10px 11px; font-size:15px; outline:none; }
+  textarea { resize:vertical; min-height:64px; }
+  input::placeholder { color:var(--muted); }
+  select { -webkit-appearance:none; appearance:none; }
+  .btn { border:0; border-radius:10px; padding:9px 12px; font-size:13px; font-weight:600; color:var(--accentTxt);
+    background:var(--accent2); white-space:nowrap; }
+  .btn.ghost { background:var(--accentWash); color:var(--accentDeep); border:1px solid var(--accentLine); }
+  .btn.green { background:#1f8f57; }
+  .btn.red { background:#b34a4a; }
+  .btn.orange { background:#b8732a; }
+  .btn.tiny { padding:6px 9px; font-size:11.5px; border-radius:8px; font-weight:500; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:9px; }
+  .chip { border:1px solid var(--accentLine); background:var(--accentWash); color:var(--accentDeep);
+    border-radius:999px; padding:5px 10px; font-size:11.5px; }
+  .chip.on { background:var(--accent2); border-color:var(--accent2); color:var(--accentTxt); }
+  .chips .label { font-size:11px; color:var(--muted); align-self:center; margin-right:2px; }
+  .stats { display:flex; gap:8px; margin:2px 0 10px; }
+  .stat { flex:1; background:var(--card); border:1px solid var(--line); border-top:3px solid var(--accent);
+    border-radius:12px; padding:9px 10px; box-shadow:var(--shadow); }
+  .stat b { display:block; font-size:17px; color:var(--accentDeep); }
+  .stat small { color:var(--sub); font-size:10.5px; }
+  .tabs { display:flex; gap:6px; margin:4px 0 10px; }
+  .tab { flex:1; text-align:center; padding:8px; border-radius:10px; background:var(--accentWash);
+    border:1px solid var(--accentLine); color:var(--accentDeep); font-size:12.5px; }
+  .tab.on { background:var(--accent2); border-color:var(--accent2); color:var(--accentTxt); font-weight:600; }
+  .task { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--muted);
+    border-radius:12px; padding:11px 11px 9px; margin-bottom:9px; box-shadow:var(--shadow); }
+  .task.high { border-left-color:var(--red); }
+  .task.mid { border-left-color:var(--orange); }
+  .task.low { border-left-color:var(--green); }
+  .task.done { opacity:.55; }
+  .task.active { border-color:var(--accent); box-shadow:0 0 0 2px var(--glow); }
+  .ttl { font-size:15px; font-weight:600; line-height:1.35; word-break:break-word; }
+  .task.done .ttl { text-decoration:line-through; }
+  .meta { color:var(--sub); font-size:11px; margin-top:4px; line-height:1.5; }
+  .ptag { display:inline-block; padding:1px 6px; border-radius:999px; font-size:10px; font-weight:700;
+    margin-right:5px; vertical-align:1px; }
+  .ptag.high { color:var(--red); background:var(--redSoft); }
+  .ptag.mid { color:var(--orange); background:var(--orangeSoft); }
+  .ptag.low { color:var(--green); background:var(--greenSoft); }
+  .note { color:var(--muted); font-size:11px; margin-top:3px; }
+  .timer { color:var(--accent); font-size:12px; margin-top:4px; font-variant-numeric:tabular-nums; }
+  .actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .empty { color:var(--muted); text-align:center; padding:28px 10px; font-size:13px;
+    position:relative; overflow:hidden; border-radius:12px; }
+  .empty::before { content:""; position:absolute; inset:0; background:var(--pattern); opacity:.30; pointer-events:none; }
+  .empty::after { content:""; position:absolute; left:50%; top:16px; width:34px; height:3px; margin-left:-17px;
+    border-radius:2px; background:var(--accent); opacity:.7; }
+  .overload { border:1px solid var(--warnLine); background:var(--warnBg); color:var(--warnTxt);
+    border-radius:12px; padding:10px 11px; font-size:12px; margin-bottom:9px; display:flex; gap:8px; align-items:center; }
+  .overload .btn { margin-left:auto; }
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.62); display:none; z-index:50; padding:18px; }
+  .modal.show { display:flex; align-items:flex-end; }
+  .sheet { width:100%; max-width:720px; margin:0 auto; background:var(--card); border:1px solid var(--line);
+    border-radius:16px; padding:14px; max-height:82vh; overflow:auto; }
+  .sheet h3 { margin:0 0 8px; font-size:15px; }
+  .sheet .body { color:var(--txt); font-size:13px; line-height:1.65; white-space:pre-wrap; }
+  .step { display:flex; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .step:last-child { border-bottom:0; }
+  .step input { flex:0 0 auto; margin-top:3px; }
+  .step small { color:var(--muted); display:block; margin-top:2px; }
+  .setup { padding:22px 4px; }
+  .setup h2 { font-size:20px; margin:4px 0 6px; }
+  .setup p { color:var(--sub); font-size:12.5px; line-height:1.7; }
+  .setup label { display:block; color:var(--sub); font-size:11.5px; margin:12px 0 5px; }
+  .setup input { width:100%; }
+  .toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:var(--card);
+    color:var(--txt); border:1px solid var(--line); border-radius:10px; padding:9px 13px; font-size:12.5px;
+    box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .15s; z-index:80; max-width:90%; }
+  .toast.show { opacity:1; }
+  .hint { color:var(--muted); font-size:11px; line-height:1.6; margin-top:8px; }
+  .deco-bar { height:11px; margin:0 2px 12px; border-radius:99px; background:var(--pattern), linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity:.9; box-shadow:0 0 20px var(--glow); }
+  .theme-grid { display:flex; gap:9px; flex-wrap:wrap; margin-top:8px; }
+  .stylechips { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 2px; }
+  .stylechips .chip { padding:6px 10px; }
+  button, .tab, .chip, .swatch, .calcell, .task { transition:transform .08s ease, filter .08s ease, opacity .08s ease; }
+  button:active, .tab:active, .chip:active, .swatch:active, .pressed { transform:scale(.96); filter:brightness(.9); }
+  .task.pressed { transform:scale(.995); filter:brightness(.97); }
+  .btn.busy { opacity:.65; }
+  .btn[disabled] { opacity:.6; }
+  .swatch { width:30px; height:30px; border-radius:9px; border:2px solid transparent; position:relative; }
+  .swatch.on { border-color:var(--txt); box-shadow:0 0 0 2px var(--card); }
+  .swatch.on::after { content:"✓"; position:absolute; inset:0; display:flex; align-items:center;
+    justify-content:center; color:var(--accentTxt); font-size:14px; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.25); }
+  .calhead { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .calhead b { flex:1; text-align:center; font-size:14px; }
+  .calgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+  .calwd { text-align:center; font-size:10px; color:var(--muted); padding:3px 0; }
+  .calcell { min-height:46px; border-radius:9px; border:1px solid transparent; padding:5px 3px 3px;
+    text-align:center; position:relative; background:var(--card2); color:var(--sub); font-size:11px; }
+  .calcell.today { border-color:var(--accent); color:var(--txt); }
+  .calcell.sel { background:var(--accent2); color:var(--accentTxt); }
+  .calcell .n { font-size:11px; font-weight:600; }
+  .calcell .dots { display:flex; justify-content:center; gap:2px; margin-top:4px; min-height:5px; }
+  .calcell .dots i { width:4px; height:4px; border-radius:50%; background:var(--accent); display:block; }
+  .calcell.sel .dots i { background:var(--accentTxt); }
+  .calcell.out { opacity:.25; }
+  .customdue { display:flex; gap:6px; margin-top:8px; }
+  .customdue input, .customdue select { width:50%; font-size:12px; padding:8px; }
+  .settingsSec { border-top:1px solid var(--line); margin-top:14px; padding-top:12px; }
+  .settingsSec h3 { font-size:13px; margin:0 0 4px; color:var(--txt); }
+  .settingsSec h3::before { content:""; display:inline-block; width:3px; height:12px; margin-right:6px;
+    border-radius:2px; background:var(--accent); vertical-align:-1px; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .hidden { display:none !important; }
+  .settingsHead { display:flex; align-items:center; gap:8px; }
+  .settingsHead h2 { flex:1; margin:0; }
+  .themeName { color:var(--muted); font-size:11px; }
+  .badge { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--red);
+    margin-left:4px; vertical-align:middle; box-shadow:0 0 6px var(--red); }
+  .updatebox { border:1px dashed var(--line); border-radius:10px; padding:9px 10px; margin-top:8px; }
+  .updatebox.on { border-style:solid; border-color:var(--accent); background:var(--accentSoft); }
+  @media (max-width:420px) {
+    .wrap { padding:10px 10px 0; }
+    header { margin-left:-10px; margin-right:-10px; padding:12px 12px 10px; }
+    .brand { font-size:17px; }
+    .sync { font-size:10px; }
+    .btn { padding:8px 9px; font-size:12px; }
+    .btn.tiny { padding:6px 8px; font-size:11px; }
+    .actions { gap:4px; }
+    .stat { padding:8px; }
+    .stat b { font-size:15px; }
+    .stat small { font-size:10px; }
+    .task { padding:10px 9px 8px; }
+  }
+</style>
+</head>
+<body class="light" data-style="minimal">
+<div class="wrap">
+  <header>
+    <div class="brand">ADHD<span>-lite</span></div>
+    <div class="sync"><span id="dot" class="dot"></span><span id="syncText">未连接</span></div>
+    <button class="iconbtn" id="refreshBtn" title="立即同步">↻</button>
+    <button class="iconbtn" id="settingsBtn">设置<span id="updateBadge" class="badge hidden"></span></button>
+  </header>
+  <div class="deco-bar"></div>
+
+  <div id="setup" class="card setup hidden">
+    <div class="settingsHead">
+      <h2 id="setupTitle">连接电脑</h2>
+      <button class="btn ghost tiny hidden" id="backBtn">← 返回主界面</button>
+    </div>
+    <p>电脑和手机需要在同一 Wi-Fi，或都登录 Tailscale。地址和令牌在电脑的「设置 → 手机 / 同步」里。</p>
+    <label>电脑地址</label>
+    <input id="serverInput" placeholder="http://100.x.x.x:17890" autocomplete="off">
+    <label>令牌</label>
+    <input id="tokenInput" placeholder="16 位令牌" autocomplete="off">
+    <div class="row" style="margin-top:14px;flex-wrap:wrap">
+      <button class="btn" id="saveSetup">保存并连接</button>
+      <button class="btn ghost" id="testSetup">测试地址</button>
+      <button class="btn ghost" id="diagBtn">连接诊断</button>
+      <button class="btn ghost" id="refreshBtn2">刷新同步</button>
+    </div>
+    <div class="hint" id="connStatus">未连接。先填电脑地址和令牌，再点「保存并连接」。</div>
+    <div class="hint">提示：Tailscale 地址通常是 100.x；同一 Wi-Fi 用 192.168.x。电脑防火墙要放行 17890（电脑设置页有说明）。</div>
+
+    <div class="settingsSec">
+      <h3>同步与通知</h3>
+      <div class="hint" id="nativeStatus" style="margin-top:2px">通知状态读取中…</div>
+      <div class="row" style="margin-top:8px;flex-wrap:wrap">
+        <button class="btn ghost" id="noticeBtn">允许通知</button>
+        <button class="btn ghost" id="channelBtn">通知通道设置</button>
+        <button class="btn ghost" id="exactBtn">允许精确闹钟</button>
+        <button class="btn ghost" id="batteryBtn">允许后台运行</button>
+        <button class="btn ghost" id="testNotify">测试通知（5 秒）</button>
+      </div>
+      <div class="hint">通知不弹/不响时依次检查：通知权限 → 通知通道（横幅/声音/震动）→ 精确闹钟 → 电池优化。测试通知走「响铃」通道，只验证手机本地，不需要电脑开着。</div>
+    </div>
+
+    <div class="settingsSec">
+      <h3>手机外观（独立于电脑）</h3>
+      <div class="stylechips" id="styleChips"></div>
+      <div class="theme-grid" id="themeSwatches"></div>
+      <div class="row" style="margin-top:9px;flex-wrap:wrap">
+        <button class="btn ghost" id="modeBtn">切换深色 / 浅色</button>
+        <span class="themeName" id="themeName"></span>
+      </div>
+      <div class="hint">4 种底色（柔和 / 冷白 / 素雅 / 墨夜）× 6 个更深的强调色；页头、统计、分页、任务标签和留白纹样都会跟着变。只存在手机本地，不影响电脑。</div>
+    </div>
+
+    <div class="settingsSec">
+      <h3>版本与更新</h3>
+      <div class="hint" id="versionLine" style="margin-top:2px">App v—</div>
+      <div class="hint" id="updateLine">连接电脑后可检查新版本。</div>
+      <div class="row" style="margin-top:8px;flex-wrap:wrap">
+        <button class="btn ghost" id="updateCheckBtn">检查更新</button>
+        <button class="btn hidden" id="updateInstallBtn">下载并安装</button>
+      </div>
+      <div class="hint">电脑端重新打包 APK 后，这里会提示新版本。Android 不允许静默安装，点「下载并安装」后系统还会再确认一次。</div>
+    </div>
+  </div>
+
+  <div id="main" class="hidden">
+    <div class="card">
+      <div class="addrow">
+        <input id="newTitle" placeholder="记一件事…" autocomplete="off">
+        <button class="btn" id="addBtn">添加</button>
+      </div>
+      <div class="chips" id="priorityChips">
+        <span class="label">重要度</span>
+        <button class="chip" data-p="high">高</button>
+        <button class="chip on" data-p="mid">中</button>
+        <button class="chip" data-p="low">低</button>
+      </div>
+      <div class="chips" id="dueChips">
+        <span class="label">截止</span>
+        <button class="chip on" data-d="today">今天 23:59</button>
+        <button class="chip" data-d="hour">1 小时后</button>
+        <button class="chip" data-d="tomorrow">明天 21:00</button>
+        <button class="chip" data-d="delay">延时</button>
+        <button class="chip" data-d="custom">自定义</button>
+      </div>
+      <div id="delayDue" class="customdue hidden">
+        <input type="number" id="delayNum" min="1" value="30" inputmode="numeric" aria-label="延时数字">
+        <select id="delayUnit" aria-label="延时单位">
+          <option value="min">分钟后</option>
+          <option value="hour">小时后</option>
+          <option value="sec">秒后</option>
+        </select>
+      </div>
+      <div id="customDue" class="customdue hidden">
+        <input type="date" id="dueDate">
+        <input type="time" id="dueTime" value="21:00">
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b id="statOpen">0</b><small>待办</small></div>
+      <div class="stat"><b id="statDone">0</b><small>今天完成</small></div>
+      <div class="stat"><b id="statFocus">0m</b><small>今天专注</small></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab on" data-tab="today">今天</div>
+      <div class="tab" data-tab="all">全部</div>
+      <div class="tab" data-tab="month">月历</div>
+      <div class="tab" data-tab="done">已完成</div>
+    </div>
+
+    <div id="calendar" class="card hidden">
+      <div class="calhead">
+        <button class="btn ghost tiny" id="calPrev">‹</button>
+        <b id="calTitle"></b>
+        <button class="btn ghost tiny" id="calNext">›</button>
+        <button class="btn ghost tiny" id="calToday">今天</button>
+      </div>
+      <div class="calgrid" id="calGrid"></div>
+      <div class="hint" id="calHint">点一天看当天任务</div>
+    </div>
+
+    <div id="overload" class="overload hidden">
+      <span id="overloadText">今天排不下</span>
+      <button class="btn orange tiny" id="triageBtn">AI 取舍</button>
+    </div>
+
+    <div id="list"></div>
+    <div class="hint" id="footHint">手机用缓存展示；到点提醒由 Android 本地闹钟负责，电脑关机也会响。</div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <h3 id="modalTitle">提示</h3>
+    <div class="body" id="modalBody"></div>
+    <div id="modalSteps"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn ghost" id="modalClose">关闭</button>
+      <button class="btn hidden" id="modalOk">加入清单</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var LS_SERVER = "adhd_server", LS_TOKEN = "adhd_token", LS_CACHE = "adhd_cache";
+  var LS_OUTBOX = "adhd_outbox", LS_PRI = "adhd_pri", LS_DUE = "adhd_due";
+  var server = localStorage.getItem(LS_SERVER) || "";
+  var token = localStorage.getItem(LS_TOKEN) || "";
+  var state = null;
+  var offline = false;
+  var tab = "today";
+  var forceSettings = false;
+  var inSettings = false;
+  var localAppVersion = "";
+  try {
+    var qs0 = new URLSearchParams(location.search);
+    var qtab = qs0.get("tab");
+    if (qtab === "today" || qtab === "all" || qtab === "month" || qtab === "done") tab = qtab;
+    forceSettings = qs0.get("settings") === "1";
+  } catch(e) {}
+  var priority = localStorage.getItem(LS_PRI) || "mid";
+  var dueKind = localStorage.getItem(LS_DUE) || "today";
+  var busy = false;
+  var pollTimer = null;
+  var splitSteps = [];
+  var calCursor = new Date();
+  var calSelected = todayKey(Date.now());
+  // v0.11.2：4 种底色（柔和 / 冷白 / 素雅 / 墨夜）× 6 个更深的强调色。
+  // 上次只留柔和被反馈太单一；这次每套底色都有明显区别，墨夜固定深色。
+  var STYLES = {
+    soft: {
+      name:"柔和", forceDark:false,
+      light:{ bg:"#F4EEE4", card:"#FFFDF8", card2:"#EDE5D8", line:"#DCCFBE", txt:"#2F2A24", sub:"#675E52", muted:"#948878" },
+      dark: { bg:"#1C1916", card:"#26221D", card2:"#302B25", line:"#453D34", txt:"#F3EDE4", sub:"#C2B5A5", muted:"#918374" }
+    },
+    cool: {
+      name:"冷白", forceDark:false,
+      light:{ bg:"#EDF3F8", card:"#FFFFFF", card2:"#E3ECF4", line:"#CBD9E5", txt:"#15232F", sub:"#4F6577", muted:"#7E93A5" },
+      dark: { bg:"#0F1822", card:"#172431", card2:"#1E2E3D", line:"#2E4558", txt:"#E6F0F8", sub:"#A3B8CA", muted:"#71889C" }
+    },
+    elegant: {
+      name:"素雅", forceDark:false,
+      light:{ bg:"#F1F2EA", card:"#FCFDF7", card2:"#E7E9DD", line:"#D2D6C6", txt:"#2B2E25", sub:"#606657", muted:"#8B917F" },
+      dark: { bg:"#191C17", card:"#22261F", card2:"#2B3028", line:"#3D433A", txt:"#EEF1E7", sub:"#B8BFAD", muted:"#868D7C" }
+    },
+    night: {
+      name:"墨夜", forceDark:true,
+      light:{ bg:"#20242B", card:"#2A2F38", card2:"#333A44", line:"#46505D", txt:"#EEF2F7", sub:"#B4BFCD", muted:"#8491A1" },
+      dark: { bg:"#0E1116", card:"#171B21", card2:"#20262E", line:"#333B46", txt:"#EEF2F7", sub:"#AEBAC8", muted:"#7B8898" }
+    }
+  };
+  var STYLE_ORDER = ["soft","cool","elegant","night"];
+  var ACCENTS = [
+    { id:"celadon",   name:"青瓷", hex:"#3F7F6B" },
+    { id:"mist",      name:"雾蓝", hex:"#3E6E9E" },
+    { id:"sand",      name:"暖砂", hex:"#B05F2E" },
+    { id:"plum",      name:"梅子", hex:"#8A4F73" },
+    { id:"terracotta",name:"赤陶", hex:"#B34A3F" },
+    { id:"pine",      name:"松烟", hex:"#4F6568" }
+  ];
+  var phoneTheme = { style:"soft", accent:"sand", mode:"light" };
+  try {
+    var savedTheme = JSON.parse(localStorage.getItem("adhd_phone_theme") || "null");
+    if (savedTheme) {
+      var oldStyleMap = { soft:"soft", cool:"cool", elegant:"elegant", scifi:"night", minimal:"cool", night:"night" };
+      var oldMap = {
+        blue:"mist", green:"celadon", orange:"sand", purple:"plum", rose:"plum", cyan:"pine",
+        celadon:"celadon", mist:"mist", sand:"sand", plum:"plum", terracotta:"terracotta", pine:"pine",
+        cedar:"celadon", ice:"mist", slate:"pine", fog:"pine", bean:"terracotta", moss:"celadon",
+        violet:"plum", star:"celadon", deep:"mist", aurora:"celadon", matrix:"pine", mono:"pine"
+      };
+      phoneTheme = {
+        style: oldStyleMap[savedTheme.style] || "soft",
+        accent: oldMap[savedTheme.accent] || "sand",
+        mode: savedTheme.mode === "dark" ? "dark" : "light"
+      };
+    }
+  } catch(e) {}
+
+  function styleOf(id){ return STYLES[id] || STYLES.soft; }
+  function accentOf(id){
+    for (var i=0;i<ACCENTS.length;i++) if (ACCENTS[i].id === id) return ACCENTS[i];
+    return ACCENTS[0];
+  }
+  function hexToRgb(h){
+    h = String(h || "").replace("#","");
+    if (h.length === 3) h = h.charAt(0)+h.charAt(0)+h.charAt(1)+h.charAt(1)+h.charAt(2)+h.charAt(2);
+    var n = parseInt(h, 16);
+    return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+  }
+  function rgba(h, a){ var c = hexToRgb(h); return "rgba("+c.r+","+c.g+","+c.b+","+a+")"; }
+  function shade(h, amt){
+    var c = hexToRgb(h);
+    function f(v){ return Math.max(0, Math.min(255, Math.round(amt < 0 ? v*(1+amt) : v+(255-v)*amt))); }
+    function hx(v){ var s = v.toString(16); return s.length < 2 ? "0"+s : s; }
+    return "#" + hx(f(c.r)) + hx(f(c.g)) + hx(f(c.b));
+  }
+  function contrastOn(h){
+    var c = hexToRgb(h);
+    var lum = (0.2126*c.r + 0.7152*c.g + 0.0722*c.b) / 255;
+    return lum > 0.62 ? "#17202A" : "#FFFFFF";
+  }
+  // 一条斜纹 + 一层小点，专门放在页头、空态和右下角的留白里。
+  function patternFor(h){
+    var line = rgba(h, .16), dot = rgba(h, .20);
+    return "repeating-linear-gradient(135deg, transparent 0 17px, " + line + " 17px 18px), " +
+           "radial-gradient(circle, " + dot + " 1.3px, transparent 1.4px) 0 0/14px 14px";
+  }
+
+  function applyTheme(){
+    var acc = accentOf(phoneTheme.accent);
+    phoneTheme.accent = acc.id;
+    var sd = styleOf(phoneTheme.style);
+    var night = !!sd.forceDark;
+    var dark = night || phoneTheme.mode === "dark";
+    var base = dark ? sd.dark : sd.light;
+    var r = document.documentElement.style;
+    r.setProperty("--bg", base.bg);
+    r.setProperty("--card", base.card);
+    r.setProperty("--card2", base.card2);
+    r.setProperty("--line", base.line);
+    r.setProperty("--txt", base.txt);
+    r.setProperty("--sub", base.sub);
+    r.setProperty("--muted", base.muted);
+    r.setProperty("--accent", acc.hex);
+    r.setProperty("--accentDeep", shade(acc.hex, dark ? 0.24 : -0.24));
+    r.setProperty("--accent2", shade(acc.hex, dark ? 0.12 : -0.12));
+    r.setProperty("--accentSoft", rgba(acc.hex, dark ? .24 : .14));
+    r.setProperty("--accentLine", rgba(acc.hex, dark ? .52 : .38));
+    r.setProperty("--accentWash", rgba(acc.hex, dark ? .10 : .055));
+    r.setProperty("--accentTxt", contrastOn(acc.hex));
+    r.setProperty("--glow", rgba(acc.hex, dark ? .30 : .20));
+    r.setProperty("--glow2", rgba(acc.hex, .08));
+    r.setProperty("--pattern", patternFor(acc.hex));
+    r.setProperty("--green", dark ? "#3CD489" : "#1F9D63");
+    r.setProperty("--orange", dark ? "#FFAE57" : "#D9822B");
+    r.setProperty("--red", dark ? "#FF7A72" : "#D9534F");
+    r.setProperty("--purple", dark ? "#B9A6FF" : "#7A6B92");
+    r.setProperty("--redSoft", dark ? "rgba(255,122,114,.18)" : "rgba(217,83,79,.13)");
+    r.setProperty("--orangeSoft", dark ? "rgba(255,174,87,.18)" : "rgba(217,130,43,.14)");
+    r.setProperty("--greenSoft", dark ? "rgba(60,212,137,.17)" : "rgba(31,157,99,.13)");
+    r.setProperty("--warnBg", dark ? "#2A2116" : "#FFF4E5");
+    r.setProperty("--warnLine", dark ? "#6B4C25" : "#F0C48A");
+    r.setProperty("--warnTxt", dark ? "#FFC078" : "#8A5A1F");
+    r.setProperty("--shadow", dark ? "0 6px 18px rgba(0,0,0,.35)" : "0 6px 18px rgba(60,45,30,.08)");
+    document.body.classList.toggle("light", !dark);
+    document.body.setAttribute("data-style", phoneTheme.style);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", base.bg);
+    paintThemeUI();
+  }
+
+  function paintThemeUI(){
+    var chips = $("styleChips");
+    if (chips) {
+      var hs = "";
+      for (var s=0;s<STYLE_ORDER.length;s++) {
+        var k = STYLE_ORDER[s];
+        hs += '<button class="chip' + (k === phoneTheme.style ? " on" : "") + '" data-s="' + k + '">' + STYLES[k].name + '</button>';
+      }
+      chips.innerHTML = hs;
+    }
+    var sw = $("themeSwatches");
+    if (sw) {
+      var h = "";
+      for (var i=0;i<ACCENTS.length;i++) {
+        var a = ACCENTS[i];
+        h += '<button class="swatch' + (a.id === phoneTheme.accent ? " on" : "") + '" data-a="' + a.id +
+              '" title="' + a.name + '" style="background:' + a.hex + '"></button>';
+      }
+      sw.innerHTML = h;
+    }
+    var sd = styleOf(phoneTheme.style);
+    var acc = accentOf(phoneTheme.accent);
+    var tn = $("themeName");
+    if (tn) tn.textContent = sd.name + " · " + acc.name + " · " + (sd.forceDark ? "固定深色" : (phoneTheme.mode === "light" ? "浅色" : "深色"));
+    var mb = $("modeBtn");
+    if (mb) {
+      mb.style.display = sd.forceDark ? "none" : "";
+      mb.textContent = phoneTheme.mode === "light" ? "当前浅色 · 点一下切深色" : "当前深色 · 点一下切浅色";
+    }
+  }
+  function saveTheme(){ localStorage.setItem("adhd_phone_theme", JSON.stringify(phoneTheme)); applyTheme(); }
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+  }); }
+  function showToast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("show");
+    clearTimeout(showToast._t); showToast._t=setTimeout(function(){t.classList.remove("show");},2200); }
+  function setSync(on, text){ var d=$("dot"); d.className="dot "+(on?"on":"off");
+    $("syncText").textContent=text; }
+
+  function base(){ return server.replace(/\/+$/,""); }
+  function req(url, opt, ms){
+    ms = ms || 9000;
+    if (!window.AbortController) return fetch(url, opt);
+    var c = new AbortController();
+    opt.signal = c.signal;
+    var t = setTimeout(function(){ try { c.abort(); } catch(e) {} }, ms);
+    return fetch(url, opt).then(function(r){ clearTimeout(t); return r; },
+      function(e){ clearTimeout(t); throw e; });
+  }
+  function api(path, body, method){
+    var opt = { method: method || (body ? "POST" : "GET"), headers: { "X-ADHD-Token": token } };
+    if (body) { opt.headers["Content-Type"]="application/json; charset=utf-8"; opt.body=JSON.stringify(body); }
+    return req(base()+path, opt).then(function(r){
+      if (r.status === 401) throw new Error("令牌无效");
+      return r.text().then(function(txt){
+        var j = {};
+        try { j = txt ? JSON.parse(txt) : {}; } catch(e) {}
+        if (!r.ok || j.ok === false) throw new Error(j.error || ("HTTP " + r.status));
+        return j;
+      });
+    });
+  }
+
+  function setupVisible(v){
+    inSettings = v;
+    $("setup").classList.toggle("hidden", !v);
+    $("main").classList.toggle("hidden", v);
+    if (v) {
+      $("serverInput").value = server;
+      $("tokenInput").value = token;
+      if (!state) setSync(false, "未连接");
+      $("setupTitle").textContent = state ? "设置" : "连接电脑";
+      $("backBtn").classList.toggle("hidden", !state);
+      refreshNativeStatus();
+      checkUpdate();
+    } else {
+      $("backBtn").classList.add("hidden");
+    }
+  }
+  function showMain(){ setupVisible(false); render(); }
+
+  function setConnStatus(text, bad){
+    var el = $("connStatus");
+    if (!el) return;
+    el.textContent = text;
+    el.style.color = bad ? "var(--red)" : "var(--sub)";
+  }
+
+  function connect(){
+    server = $("serverInput").value.trim().replace(/\/+$/,"");
+    token = $("tokenInput").value.trim();
+    if (!server || !token) { showToast("地址和令牌都要填"); setConnStatus("地址和令牌都要填", true); return; }
+    if (!/^https?:\/\//i.test(server)) { showToast("地址要以 http:// 开头"); setConnStatus("地址要以 http:// 开头（例如 http://100.x.x.x:17890）", true); return; }
+    localStorage.setItem(LS_SERVER, server);
+    localStorage.setItem(LS_TOKEN, token);
+    busy = true;
+    setConnStatus("正在连接 " + server + " …");
+    api("/state").then(function(s){
+      state = s; offline = false; setupVisible(false); render(); syncNative(); setSync(true, "已连接 " + nowHM());
+      setConnStatus("已连接 " + nowHM() + " · 任务 " + ((s.tasks||[]).length) + " 条");
+    }).catch(function(e){
+      showToast("连接失败：" + e.message);
+      setSync(false, "连接失败");
+      setConnStatus("连接失败：" + e.message + "（地址、令牌、防火墙、Tailscale 四项都查一下）", true);
+    }).then(function(){ busy=false; });
+  }
+
+  function testConnect(){
+    var s = $("serverInput").value.trim().replace(/\/+$/,"");
+    if (!s) { showToast("先填地址"); setConnStatus("先填地址", true); return; }
+    if (!/^https?:\/\//i.test(s)) { showToast("地址要以 http:// 开头"); setConnStatus("地址要以 http:// 开头", true); return; }
+    setConnStatus("正在测试 " + s + " …");
+    req(s + "/health", {}, 7000).then(function(r){ return r.json(); }).then(function(j){
+      if (j && j.ok) { showToast("电脑可达，保存后再填令牌"); setConnStatus("地址可达（" + s + "）；再点「保存并连接」验证令牌"); }
+      else { showToast("返回异常"); setConnStatus("电脑有响应但返回异常", true); }
+    }).catch(function(e){
+      showToast("连不上：" + e.message);
+      setConnStatus("连不上：" + e.message + "；确认电脑开着、地址和端口正确、防火墙已放行", true);
+    });
+  }
+
+  function diagnose(){
+    var s = $("serverInput").value.trim().replace(/\/+$/,"");
+    var t = $("tokenInput").value.trim();
+    if (!s || !t) { showToast("先填地址和令牌"); setConnStatus("地址/令牌为空", true); return; }
+    if (!/^https?:\/\//i.test(s)) { setConnStatus("地址要以 http:// 开头", true); return; }
+    var lines = ["地址：" + s, "令牌：" + t.length + " 位", ""];
+    setConnStatus("正在诊断…");
+    var p = req(s + "/health", {}, 7000).then(function(r){ return r.json(); }).then(function(j){
+      if (j && j.ok) lines.push("① /health：电脑可达（" + (j.version || "?") + "）");
+      else lines.push("① /health：返回异常");
+    }, function(e){ lines.push("① /health：失败 — " + e.message); });
+    p.then(function(){
+      var opt = { method:"GET", headers:{ "X-ADHD-Token": t } };
+      return req(s + "/state", opt, 9000).then(function(r){
+        return r.text().then(function(txt){
+          var j = {};
+          try { j = txt ? JSON.parse(txt) : {}; } catch(e) {}
+          return { status:r.status, body:j };
+        });
+      }).then(function(res){
+        if (res.status === 401) lines.push("② /state：令牌无效（401）");
+        else if (res.status !== 200 || res.body.ok === false) lines.push("② /state：失败 — " + (res.body.error || ("HTTP " + res.status)));
+        else lines.push("② /state：通过 · 任务 " + ((res.body.tasks || []).length) + " 条，计划 " + ((res.body.plan || []).length) + " 条");
+      }, function(e){ lines.push("② /state：失败 — " + e.message); });
+    }).then(function(){
+      var info = "";
+      try { if (window.AndroidHost && AndroidHost.getInfo) info = AndroidHost.getInfo(); } catch(e) {}
+      var st = nativeStatus();
+      lines.push("");
+      lines.push("③ 手机：" + (info || "浏览器模式"));
+      if (st) lines.push("通知：" + (st.notifications ? "开" : "关") + " · 通道：" + (st.channel === false ? "关" : "正常") + " · 响铃：" + (st.sound === false ? "关" : "开"));
+      lines.push("④ 建议：电脑端防火墙放行 TCP 17890；手机和电脑都登录 Tailscale；地址用电脑设置页显示的第一行。");
+      showModal("连接诊断", lines.join("\n"), [], false);
+      setConnStatus("诊断完成；详细结果见弹窗");
+    });
+  }
+
+  function dueFor(kind){
+    var d = new Date(); var t = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 0, 0);
+    if (kind === "hour") return Date.now() + 3600*1000;
+    if (kind === "tomorrow") { t.setDate(t.getDate()+1); t.setHours(21,0,0,0); return t.getTime(); }
+    if (kind === "delay") {
+      var n = parseInt(($("delayNum") && $("delayNum").value) || "30", 10);
+      if (!(n > 0)) n = 30;
+      var u = ($("delayUnit") && $("delayUnit").value) || "min";
+      var max = u === "hour" ? 168 : (u === "sec" ? 604800 : 10080);
+      if (n > max) n = max;
+      var ms = u === "hour" ? n * 3600000 : (u === "sec" ? n * 1000 : n * 60000);
+      return Date.now() + ms;
+    }
+    if (kind === "custom") {
+      var ds = ($("dueDate").value || "").trim();
+      var ts = ($("dueTime").value || "").trim();
+      if (ds && ts) {
+        var cd = new Date(ds + "T" + ts + ":00");
+        if (!isNaN(cd.getTime())) return cd.getTime();
+      }
+      return Date.now() + 3600*1000;
+    }
+    return t.getTime();
+  }
+  function paintCustomDue(){
+    var box = $("customDue");
+    if (box) box.classList.toggle("hidden", dueKind !== "custom");
+    var delay = $("delayDue");
+    if (delay) delay.classList.toggle("hidden", dueKind !== "delay");
+  }
+
+  function priName(p){ return p === "high" ? "高" : (p === "low" ? "低" : "中"); }
+  function nowHM(){ var d=new Date(); return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2)+":"+("0"+d.getSeconds()).slice(-2); }
+  function fmtDue(ms){
+    if (!ms) return "无截止";
+    var d = new Date(ms), now = new Date();
+    var hm = ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);
+    var same = d.toDateString() === now.toDateString();
+    if (d.getTime() < Date.now()) return "已逾期 · " + (same ? hm : (d.getMonth()+1)+"/"+d.getDate()+" "+hm);
+    if (same) return "今天 " + hm;
+    var tm = new Date(now.getTime()+86400000);
+    if (d.toDateString() === tm.toDateString()) return "明天 " + hm;
+    return (d.getMonth()+1)+"/"+d.getDate()+" "+hm;
+  }
+  function fmtDur(ms){
+    var s = Math.max(0, Math.floor(ms/1000));
+    var h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    if (h > 0) return h+":"+("0"+m).slice(-2)+":"+("0"+sec).slice(-2);
+    return ("0"+m).slice(-2)+":"+("0"+sec).slice(-2);
+  }
+  function todayKey(ms){ var d=new Date(ms); return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+  function isToday(ms){ return ms && todayKey(ms) === todayKey(Date.now()); }
+
+  function loadCache(){
+    try { var j = JSON.parse(localStorage.getItem(LS_CACHE) || "null"); if (j && j.tasks) { state = j; } } catch(e) {}
+  }
+  function saveCache(){ if (state) try { localStorage.setItem(LS_CACHE, JSON.stringify(state)); } catch(e) {} }
+
+  function outbox(){ try { return JSON.parse(localStorage.getItem(LS_OUTBOX) || "[]"); } catch(e){ return []; } }
+  function setOutbox(a){ localStorage.setItem(LS_OUTBOX, JSON.stringify(a)); }
+  function queue(path, body){
+    var a = outbox(); a.push({path:path, body:body, ts:Date.now()}); setOutbox(a);
+  }
+  function flushOutbox(){
+    var a = outbox(); if (!a.length) return Promise.resolve();
+    var one = function(i){
+      if (i >= a.length) { setOutbox([]); return Promise.resolve(); }
+      return api(a[i].path, a[i].body).then(function(){ return one(i+1); });
+    };
+    return one(0).catch(function(){ setOutbox(a); throw new Error("还有离线改动未同步"); });
+  }
+
+  function refresh(){
+    if (!server || !token || busy) return;
+    busy = true;
+    flushOutbox().then(function(){ return api("/state"); }).then(function(s){
+      state = s; offline = false; setSync(true, "已连接 " + nowHM()); saveCache(); render(); syncNative();
+      setConnStatus("已连接 " + nowHM() + " · 任务 " + ((s.tasks || []).length) + " 条");
+    }).catch(function(e){
+      offline = true; setSync(false, "离线 · 用缓存"); if (!state) loadCache(); render();
+      setConnStatus("连不上电脑：" + e.message + "（正在用缓存）", true);
+    }).then(function(){ busy = false; });
+  }
+
+  var lastNativeSig = "";
+  function syncNative(){
+    if (!state || !state.tasks || !window.AndroidHost) return;
+    var plans = state.plan || [];
+    var sig = state.tasks.map(function(t){
+      return [t.id, t.due || 0, t.done ? 1 : 0, t.title || "", t.priority || ""].join("~");
+    }).join("|");
+    sig += "||" + plans.map(function(p){
+      return [p.at || 0, p.message || "", p.level || 0].join("~");
+    }).join("|");
+    if (sig === lastNativeSig) return;
+    lastNativeSig = sig;
+    try {
+      window.AndroidHost.scheduleNotifications(JSON.stringify({ tasks: state.tasks, plan: plans }));
+      refreshNativeStatus();
+    } catch(e) {}
+  }
+
+  var lastNativeStatus = null;
+  function nativeStatus(){
+    if (!window.AndroidHost || !AndroidHost.getStatus) return null;
+    try { lastNativeStatus = JSON.parse(AndroidHost.getStatus()); } catch(e) { lastNativeStatus = null; }
+    return lastNativeStatus;
+  }
+  function refreshNativeStatus(){
+    var el = $("nativeStatus");
+    if (!el) return;
+    if (!window.AndroidHost || !AndroidHost.getStatus) { el.textContent = "浏览器模式：不排本地通知"; return; }
+    var s = nativeStatus();
+    if (!s) { el.textContent = "通知状态读取失败"; return; }
+    el.textContent = "通知：" + (s.notifications ? "已允许" : "被关闭") +
+      (s.channel === false ? "（通道被关）" : "") +
+      " · 响铃：" + (s.sound === false ? "关" : "开") +
+      " · 精确闹钟：" + (s.exact ? "已允许" : "未允许") +
+      " · 后台：" + (s.battery ? "不受限" : "可能受限") +
+      " · 已排 " + (s.scheduled || 0) + " 个";
+    var nb = $("noticeBtn"); if (nb) nb.textContent = s.notifications ? "通知已允许" : "去开启通知";
+    var bb = $("batteryBtn"); if (bb) bb.textContent = s.battery ? "后台不受限" : "允许后台运行";
+    var eb = $("exactBtn"); if (eb) eb.textContent = s.exact ? "精确闹钟已允许" : "允许精确闹钟";
+  }
+
+  function appVersion(){
+    if (localAppVersion) return localAppVersion;
+    try { if (window.AndroidHost && AndroidHost.getVersion) localAppVersion = AndroidHost.getVersion() || ""; } catch(e) {}
+    return localAppVersion;
+  }
+  function cmpVersion(a, b){
+    var pa = String(a || "").split("."), pb = String(b || "").split(".");
+    var n = Math.max(pa.length, pb.length);
+    for (var i=0;i<n;i++) {
+      var x = parseInt(pa[i], 10) || 0, y = parseInt(pb[i], 10) || 0;
+      if (x !== y) return x > y ? 1 : -1;
+    }
+    return 0;
+  }
+  function refreshUpdateHint(){
+    var lv = appVersion();
+    var vl = $("versionLine");
+    if (vl) vl.textContent = "手机 App v" + (lv || "—") + (window.AndroidHost ? "" : "（浏览器预览）");
+    var serverVer = state && state.apkVersion ? String(state.apkVersion) : "";
+    var known = !!(state && typeof state.apkVersion !== "undefined");
+    var newer = !!(serverVer && lv && cmpVersion(serverVer, lv) > 0);
+    var badge = $("updateBadge");
+    if (badge) badge.classList.toggle("hidden", !newer);
+    var line = $("updateLine");
+    var btn = $("updateInstallBtn");
+    if (newer) {
+      if (line) line.textContent = "电脑上有新版本 v" + serverVer + "（当前 v" + lv + "），点「下载并安装」。";
+      if (btn) { btn.classList.remove("hidden"); btn.textContent = "下载并安装 v" + serverVer; }
+    } else {
+      if (btn) btn.classList.add("hidden");
+      if (line) {
+        if (!state) line.textContent = "连接电脑后可检查新版本。";
+        else if (!known) line.textContent = "电脑端还没有更新信息（把桌面 exe 也升到 v0.11.0）。";
+        else if (!serverVer) line.textContent = "电脑上没找到 APK（桌面 exe 旁边的 android\\dist 目录）。";
+        else line.textContent = "已是最新（电脑包 v" + serverVer + "）。";
+      }
+    }
+  }
+  function checkUpdate(manual){
+    refreshNativeStatus();
+    if (!server || !token) {
+      refreshUpdateHint();
+      if (manual) showToast("先连接电脑");
+      return;
+    }
+    var p = refresh();
+    var done = function(){
+      refreshUpdateHint();
+      if (manual) {
+        var lv = appVersion();
+        if (state && state.apkVersion && cmpVersion(state.apkVersion, lv) > 0) showToast("发现新版本 v" + state.apkVersion);
+        else showToast("已是最新");
+      }
+    };
+    if (p && p.then) p.then(done); else done();
+  }
+  function installUpdate(){
+    if (!state || !state.apkVersion) { showToast("先连接电脑检查更新"); return; }
+    if (!window.AndroidHost || !AndroidHost.downloadUpdate) { showToast("浏览器预览不能安装 APK"); return; }
+    if (!(cmpVersion(state.apkVersion, appVersion()) > 0)) { showToast("已经是最新版本"); return; }
+    AndroidHost.downloadUpdate(base() + "/apk", token);
+    showToast("正在下载 v" + state.apkVersion + "…");
+  }
+
+  function openTask(id){ for (var i=0;i<state.tasks.length;i++) if (state.tasks[i].id===id) return state.tasks[i]; return null; }
+
+  function optimistic(id, action, minutes){
+    var t = openTask(id); if (!t) return;
+    if (action === "done") { t.done = true; t.doneAt = Date.now(); if (t.startedAt > 0) { t.spentMs += Date.now()-t.startedAt; t.startedAt=0; } }
+    else if (action === "undo") { t.done = false; t.doneAt = 0; }
+    else if (action === "start") t.startedAt = Date.now();
+    else if (action === "pause") { if (t.startedAt > 0) { t.spentMs += Date.now()-t.startedAt; t.startedAt=0; } }
+    else if (action === "postpone") t.due = Date.now() + minutes*60000;
+    saveCache();
+  }
+
+  var ACT_LABEL = { done:"完成", undo:"撤销", start:"开始", pause:"暂停", postpone:"改期", delete:"删除" };
+  function act(id, action, minutes){
+    if (busy) { showToast("正在同步，请稍后再点一次"); return; }
+    var label = ACT_LABEL[action] || "操作";
+    if (offline) {
+      optimistic(id, action, minutes);
+      queue("/action", {id:id, action:action, minutes:minutes||30});
+      render(); showToast("已" + label + "（离线排队，连上电脑后同步）"); return;
+    }
+    busy = true;
+    showToast("正在" + label + "…");
+    api("/action", {id:id, action:action, minutes:minutes||30}).then(function(){
+      return api("/state");
+    }).then(function(s){
+      state=s; saveCache(); render(); syncNative();
+      showToast("已" + label);
+    }).catch(function(e){ showToast("操作失败：" + e.message); })
+      .then(function(){ busy=false; });
+  }
+
+  function addTask(){
+    var title = $("newTitle").value.trim();
+    if (!title) { showToast("先写任务名"); return; }
+    if (busy) { showToast("正在同步，请稍后再点一次"); return; }
+    var due = dueFor(dueKind);
+    if (offline) {
+      if (!state) state = {tasks:[]};
+      var local = { id:"local-"+Date.now(), title:title, priority:priority, due:due,
+        done:false, doneAt:0, createdAt:Date.now(), startedAt:0, spentMs:0,
+        estimateMin:0, lastNote:"", snoozeCount:0, postponeCount:0, kind:"other", resumeHint:"" };
+      state.tasks.unshift(local); saveCache(); render(); syncNative();
+      queue("/add", { title:title, priority:priority, due:due, estimateMin:0, kind:"" });
+      $("newTitle").value="";
+      showToast("已离线记下，连上电脑后同步");
+      return;
+    }
+    busy = true;
+    $("addBtn").classList.add("busy");
+    showToast("正在添加…");
+    api("/add", { title:title, priority:priority, due:due, estimateMin:0, kind:"" })
+      .then(function(){ $("newTitle").value=""; return api("/state"); })
+      .then(function(s){ state=s; saveCache(); render(); syncNative(); showToast("已记下"); })
+      .catch(function(e){ showToast("添加失败：" + e.message); })
+      .then(function(){ busy=false; $("addBtn").classList.remove("busy"); });
+  }
+
+  function noteTask(id){
+    var t = openTask(id); if (!t) return;
+    var v = prompt("记一句：做到哪了？", t.lastNote || "");
+    if (v === null) return;
+    if (offline) {
+      t.lastNote = v; saveCache(); render();
+      queue("/action", {id:id, action:"note", note:v});
+      showToast("备注已排队，连上电脑后同步");
+      return;
+    }
+    busy = true;
+    api("/action", {id:id, action:"note", note:v}).then(function(){ return api("/state"); })
+      .then(function(s){ state=s; saveCache(); render(); }).catch(function(e){ showToast(e.message); })
+      .then(function(){ busy=false; });
+  }
+
+  function splitTask(id){
+    if (offline) { showToast("AI 需要连电脑"); return; }
+    showModal("AI 拆小中…", "正在让电脑端拆成 2-3 步，请稍等。", [], false);
+    api("/ai", {kind:"split", id:id}).then(function(j){
+      splitSteps = j.steps || [];
+      var lines = splitSteps.map(function(s,i){
+        return '<label class="step"><input type="checkbox" data-i="'+i+'" checked><span>'+
+          esc(s.title)+'<small>'+esc(s.kind||"other")+' · '+esc(priName(s.priority))+
+          ' · '+esc(s.delayMinutes)+' 分钟后 · 预计 '+esc(s.estimateMinutes||"")+' 分</small></span></label>';
+      }).join("");
+      $("modalTitle").textContent = "AI 拆成 " + splitSteps.length + " 步";
+      $("modalBody").textContent = "勾选后加入清单；原任务保留。";
+      $("modalSteps").innerHTML = lines || '<div class="empty">没有拆出步骤</div>';
+      $("modalOk").classList.remove("hidden");
+      $("modalOk").onclick = addSteps;
+    }).catch(function(e){
+      $("modalBody").textContent = "拆小失败：" + e.message;
+    });
+  }
+
+  function addSteps(){
+    var boxes = $("modalSteps").querySelectorAll("input[type=checkbox]");
+    var picks = [];
+    for (var i=0;i<boxes.length;i++) if (boxes[i].checked) picks.push(splitSteps[parseInt(boxes[i].getAttribute("data-i"),10)]);
+    if (!picks.length) { showToast("至少选一步"); return; }
+    var i = 0;
+    function next(){
+      if (i >= picks.length) { closeModal(); refresh(); showToast("已加入 " + picks.length + " 步"); return; }
+      var s = picks[i++];
+      api("/add", {title:s.title, priority:s.priority, due:Date.now() + (s.delayMinutes||30)*60000,
+        estimateMin:s.estimateMinutes||0, kind:s.kind||""}).then(next).catch(function(e){ showToast(e.message); });
+    }
+    next();
+  }
+
+  function triage(){
+    if (offline) { showToast("AI 需要连电脑"); return; }
+    showModal("AI 取舍中…", "正在看今天的任务和剩余时间，请稍等。", [], false);
+    api("/ai", {kind:"triage"}).then(function(j){
+      $("modalTitle").textContent = "今天怎么取舍";
+      $("modalBody").textContent = j.text || "AI 没有给出建议";
+    }).catch(function(e){ $("modalBody").textContent = "取舍失败：" + e.message; });
+  }
+
+  function showModal(title, body, steps, ok){
+    $("modalTitle").textContent = title;
+    $("modalBody").textContent = body;
+    $("modalSteps").innerHTML = "";
+    $("modalOk").classList.toggle("hidden", !ok);
+    $("modal").classList.add("show");
+  }
+  function closeModal(){ $("modal").classList.remove("show"); }
+
+  function filtered(){
+    if (!state || !state.tasks) return [];
+    var arr = state.tasks.slice();
+    if (tab === "done") return arr.filter(function(t){ return t.done; });
+    arr = arr.filter(function(t){ return !t.done; });
+    if (tab === "today") {
+      arr = arr.filter(function(t){ return !t.due || isToday(t.due) || t.due < Date.now(); });
+    }
+    arr.sort(function(a,b){
+      var ad = a.due || 9e15, bd = b.due || 9e15;
+      if (ad !== bd) return ad - bd;
+      var w = {high:0, mid:1, low:2};
+      return (w[a.priority]||1) - (w[b.priority]||1);
+    });
+    return arr;
+  }
+
+  function tasksOnDay(key){
+    if (!state || !state.tasks) return [];
+    return state.tasks.filter(function(t){
+      return t.due && todayKey(t.due) === key;
+    }).sort(function(a,b){ return (a.due||0)-(b.due||0); });
+  }
+
+  function renderCalendar(){
+    var y = calCursor.getFullYear(), m = calCursor.getMonth();
+    $("calTitle").textContent = y + " 年 " + (m+1) + " 月";
+    var first = new Date(y, m, 1);
+    var start = (first.getDay() + 6) % 7; // Monday first
+    var days = new Date(y, m+1, 0).getDate();
+    var wd = ["一","二","三","四","五","六","日"];
+    var h = "";
+    for (var w=0; w<7; w++) h += '<div class="calwd">'+wd[w]+'</div>';
+    for (var s=0; s<start; s++) h += '<div class="calcell out"></div>';
+    for (var d=1; d<=days; d++) {
+      var k2 = y+"-"+("0"+(m+1)).slice(-2)+"-"+("0"+d).slice(-2);
+      var n = tasksOnDay(k2).length;
+      var cls = "calcell" + (k2===calSelected?" sel":"") + (k2===todayKey(Date.now())?" today":"");
+      h += '<div class="'+cls+'" data-key="'+k2+'"><div class="n">'+d+'</div><div class="dots">';
+      for (var dot=0; dot<Math.min(3,n); dot++) h += '<i></i>';
+      h += '</div></div>';
+    }
+    $("calGrid").innerHTML = h;
+    var arr = tasksOnDay(calSelected);
+    $("calHint").textContent = calSelected + " · " + arr.length + " 件" + (arr.length ? "（下方）" : "");
+  }
+
+  function taskHtml(t){
+    var p = t.priority || "mid";
+    var active = t.startedAt > 0;
+    var cls = "task " + p + (t.done ? " done" : "") + (active ? " active" : "");
+    var meta = fmtDue(t.due);
+    if (t.estimateMin > 0) meta += " · 预计 " + t.estimateMin + " 分";
+    if (t.spentMs > 0) meta += " · 已用 " + Math.max(1,Math.round(t.spentMs/60000)) + " 分";
+    if (t.kind && t.kind !== "other") meta += " · " + t.kind;
+    var h = '<div class="'+cls+'" data-id="'+esc(t.id)+'">'+
+      '<div class="ttl">'+esc(t.title)+'</div>'+
+      '<div class="meta"><span class="ptag '+p+'">'+priName(p)+'</span>'+esc(meta)+'</div>';
+    if (t.lastNote) h += '<div class="note">上次：'+esc(t.lastNote)+'</div>';
+    if (active) h += '<div class="timer" data-start="'+t.startedAt+'" data-spent="'+(t.spentMs||0)+'">计时中…</div>';
+    if (!t.done) {
+      h += '<div class="actions">'+
+        '<button class="btn tiny '+(active?"orange":"green")+'" data-a="'+(active?"pause":"start")+'">'+(active?"暂停":"开始")+'</button>'+
+        '<button class="btn tiny" data-a="done">完成</button>'+
+        '<button class="btn tiny ghost" data-a="postpone">+15 分</button>'+
+        '<button class="btn tiny ghost" data-a="split">AI 拆小</button>'+
+        '<button class="btn tiny ghost" data-a="note">记一句</button>'+
+        '</div>';
+    } else {
+      h += '<div class="actions"><button class="btn tiny ghost" data-a="undo">撤销完成</button></div>';
+    }
+    return h + '</div>';
+  }
+
+  var tickTimer = null;
+  function tick(){
+    var els = document.querySelectorAll(".timer");
+    for (var i=0;i<els.length;i++) {
+      var st = parseInt(els[i].getAttribute("data-start"),10) || 0;
+      var sp = parseInt(els[i].getAttribute("data-spent"),10) || 0;
+      if (st > 0) {
+        var ms = sp + (Date.now()-st);
+        els[i].textContent = "计时中 " + fmtDur(ms);
+      }
+    }
+  }
+
+  function render(){
+    if (!state) {
+      $("backBtn").classList.add("hidden");
+      if (!server || !token) setupVisible(true);
+      return;
+    }
+    if (!inSettings) setupVisible(false);
+    var isMonth = tab === "month";
+    $("calendar").classList.toggle("hidden", !isMonth);
+    if (isMonth) renderCalendar();
+    var arr = isMonth ? tasksOnDay(calSelected) : filtered();
+    var empty = isMonth ? (calSelected + " 没有任务")
+              : (tab==="done" ? "还没有完成的任务" : "今天先这样，想到再记");
+    $("list").innerHTML = arr.length ? arr.map(taskHtml).join("") : '<div class="empty">'+esc(empty)+'</div>';
+    var open = (state.tasks||[]).filter(function(t){return !t.done;}).length;
+    var doneToday = (state.tasks||[]).filter(function(t){ return t.done && isToday(t.doneAt); }).length;
+    var focus = 0;
+    (state.tasks||[]).forEach(function(t){ if (isToday(t.doneAt||0)) focus += (t.spentMs||0); });
+    $("statOpen").textContent = open;
+    $("statDone").textContent = doneToday;
+    $("statFocus").textContent = Math.round(focus/60000) + "m";
+    var overload = open >= 5 && !isMonth;
+    $("overload").classList.toggle("hidden", !overload);
+    if (overload) $("overloadText").textContent = "今天有 " + open + " 件待办，先挑一件？";
+    refreshUpdateHint();
+    tick();
+  }
+
+  // 所有可点元素按下时先给一个缩放/变暗反馈，避免“不知道点没点到”。
+  document.addEventListener("pointerdown", function(e){
+    var el = e.target.closest("button, .tab, .chip, .swatch, .calcell, .task");
+    if (!el) return;
+    el.classList.add("pressed");
+    setTimeout(function(){ el.classList.remove("pressed"); }, 160);
+  }, true);
+
+  // events
+  $("saveSetup").onclick = connect;
+  $("testSetup").onclick = testConnect;
+  $("diagBtn").onclick = diagnose;
+  $("backBtn").onclick = showMain;
+  $("noticeBtn").onclick = function(){
+    if (!window.AndroidHost) { showToast("浏览器里不需要；装 APK 后可用"); return; }
+    var st = nativeStatus();
+    showToast("正在打开通知设置…");
+    if (st && st.notifications === false && AndroidHost.openNotificationSettings) AndroidHost.openNotificationSettings();
+    else if (AndroidHost.requestNotificationPermission) AndroidHost.requestNotificationPermission();
+  };
+  $("testNotify").onclick = function(){
+    if (window.AndroidHost && AndroidHost.testNotification) { AndroidHost.testNotification(); showToast("5 秒后应响铃并弹出横幅"); }
+    else showToast("浏览器里不需要；装 APK 后可用");
+  };
+  $("channelBtn").onclick = function(){
+    if (window.AndroidHost && AndroidHost.openChannelSettings) { showToast("正在打开通知通道设置…"); AndroidHost.openChannelSettings(); }
+    else showToast("浏览器里不需要；装 APK 后可用");
+  };
+  $("refreshBtn2").onclick = function(){ if (busy) { showToast("正在同步，请稍等"); return; } showToast("正在同步…"); refresh(); refreshNativeStatus(); };
+  $("exactBtn").onclick = function(){
+    if (window.AndroidHost && AndroidHost.requestExactAlarm) { showToast("正在打开精确闹钟设置…"); AndroidHost.requestExactAlarm(); }
+    else showToast("浏览器里不需要；装 APK 后可用");
+  };
+  $("batteryBtn").onclick = function(){
+    if (window.AndroidHost && AndroidHost.requestIgnoreBattery) { showToast("正在打开电池优化设置…"); AndroidHost.requestIgnoreBattery(); }
+    else showToast("浏览器里不需要；装 APK 后可用");
+  };
+  $("updateCheckBtn").onclick = function(){ checkUpdate(true); };
+  $("updateInstallBtn").onclick = installUpdate;
+  $("settingsBtn").onclick = function(){ setupVisible(true); };
+  $("refreshBtn").onclick = function(){ if (busy) { showToast("正在同步，请稍等"); return; } showToast("正在同步…"); refresh(); };
+  $("addBtn").onclick = addTask;
+  $("newTitle").addEventListener("keydown", function(e){ if (e.key === "Enter") addTask(); });
+  $("triageBtn").onclick = triage;
+  $("modalClose").onclick = closeModal;
+  $("modal").addEventListener("click", function(e){ if (e.target === $("modal")) closeModal(); });
+
+  $("priorityChips").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-p]"); if (!b) return;
+    priority = b.getAttribute("data-p"); localStorage.setItem(LS_PRI, priority);
+    var all = this.querySelectorAll("button"); for (var i=0;i<all.length;i++) all[i].classList.toggle("on", all[i]===b);
+  });
+  $("dueChips").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-d]"); if (!b) return;
+    dueKind = b.getAttribute("data-d"); localStorage.setItem(LS_DUE, dueKind);
+    var all = this.querySelectorAll("button"); for (var i=0;i<all.length;i++) all[i].classList.toggle("on", all[i]===b);
+    paintCustomDue();
+  });
+  $("styleChips").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-s]"); if (!b) return;
+    var st = b.getAttribute("data-s");
+    if (!STYLES[st]) return;
+    phoneTheme.style = st;
+    saveTheme();
+    showToast("已切换底色：" + STYLES[st].name);
+  });
+  $("themeSwatches").addEventListener("click", function(e){
+    var b = e.target.closest(".swatch"); if (!b) return;
+    phoneTheme.accent = b.getAttribute("data-a"); saveTheme();
+    showToast("已切换强调色：" + accentOf(phoneTheme.accent).name);
+  });
+  $("modeBtn").onclick = function(){
+    if (styleOf(phoneTheme.style).forceDark) { showToast("墨夜固定深色；要浅色请换「柔和 / 冷白」"); return; }
+    phoneTheme.mode = phoneTheme.mode === "light" ? "dark" : "light"; saveTheme();
+    showToast(phoneTheme.mode === "light" ? "已切换浅色" : "已切换深色");
+  };
+  document.querySelector(".tabs").addEventListener("click", function(e){
+    var b = e.target.closest(".tab"); if (!b) return;
+    tab = b.getAttribute("data-tab");
+    if (tab === "month") {
+      var now = new Date();
+      calCursor = new Date(now.getFullYear(), now.getMonth(), 1);
+      calSelected = todayKey(Date.now());
+    }
+    var all = this.querySelectorAll(".tab"); for (var i=0;i<all.length;i++) all[i].classList.toggle("on", all[i]===b);
+    render();
+  });
+  $("calPrev").onclick = function(){
+    calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()-1, 1);
+    calSelected = localDateValue(calCursor);
+    render();
+  };
+  $("calNext").onclick = function(){
+    calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1);
+    calSelected = localDateValue(calCursor);
+    render();
+  };
+  $("calToday").onclick = function(){
+    var n = new Date();
+    calCursor = new Date(n.getFullYear(), n.getMonth(), 1);
+    calSelected = todayKey(Date.now());
+    render();
+  };
+  $("calGrid").addEventListener("click", function(e){
+    var c = e.target.closest(".calcell[data-key]"); if (!c) return;
+    calSelected = c.getAttribute("data-key"); render();
+  });
+  $("list").addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-a]"); if (!btn) return;
+    var card = btn.closest(".task"); if (!card) return;
+    var id = card.getAttribute("data-id"); var a = btn.getAttribute("data-a");
+    if (a === "split") splitTask(id);
+    else if (a === "note") noteTask(id);
+    else if (a === "postpone") act(id, "postpone", 15);
+    else act(id, a, 0);
+  });
+
+  function paintChips(){
+    var ps = $("priorityChips").querySelectorAll("button[data-p]");
+    for (var i=0;i<ps.length;i++) ps[i].classList.toggle("on", ps[i].getAttribute("data-p")===priority);
+    var ds = $("dueChips").querySelectorAll("button[data-d]");
+    for (var j=0;j<ds.length;j++) ds[j].classList.toggle("on", ds[j].getAttribute("data-d")===dueKind);
+    paintCustomDue();
+    var ts = document.querySelectorAll(".tabs .tab");
+    for (var k=0;k<ts.length;k++) ts[k].classList.toggle("on", ts[k].getAttribute("data-tab")===tab);
+  }
+  function localDateValue(d){
+    return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);
+  }
+  if ($("dueDate")) $("dueDate").value = localDateValue(new Date());
+  paintChips();
+  applyTheme();
+
+  // init
+  if (server && token) {
+    loadCache();
+    if (state) render();
+    if (forceSettings) setupVisible(true); else setupVisible(false);
+    refresh();
+  } else {
+    setupVisible(true);
+  }
+  forceSettings = false;
+  pollTimer = setInterval(refresh, 3000);
+  tickTimer = setInterval(tick, 1000);
+  window.adhdResume = function(){
+    if (server && token) refresh();
+    refreshNativeStatus();
+    refreshUpdateHint();
+  };
+  // Android 硬件返回：设置页 → 主界面；其它 tab → 今天；再按才退出 App。
+  window.adhdHandleBack = function(){
+    if (inSettings) { showMain(); return true; }
+    if (tab !== "today") { tab = "today"; paintChips(); render(); return true; }
+    return false;
+  };
+
+  // expose for debugging
+  window.adhd = { state: function(){ return state; }, refresh: refresh, server: base, diagnose: diagnose };
+})();
+</script>
+</body>
+</html>
